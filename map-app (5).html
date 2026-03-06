@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>지도 앱</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f0ede8; --panel:#faf8f5; --border:#ddd9d0;
+  --red:#e84545; --blue:#2563eb; --green:#16a34a;
+  --sheets:#0f9d58; --excel:#217346;
+  --ink:#1a1814; --muted:#8a857c;
+  --shadow:0 2px 20px rgba(0,0,0,0.1);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+header{background:var(--panel);border-bottom:1.5px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;z-index:1000;}
+.logo{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:var(--ink);flex-shrink:0;}
+.logo em{color:var(--red);font-style:normal;}
+.search-wrap{flex:1;display:flex;gap:7px;max-width:480px;}
+.search-input{flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;font-family:'Noto Sans KR',sans-serif;color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s;}
+.search-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.search-input::placeholder{color:var(--muted);}
+.btn{padding:8px 13px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-family:'Noto Sans KR',sans-serif;font-weight:600;display:flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.btn-blue{background:var(--blue);color:#fff;} .btn-blue:hover{background:#1d4ed8;}
+.btn-red{background:var(--red);color:#fff;} .btn-red:hover{background:#c73232;}
+.btn-ghost{background:#fff;color:var(--muted);border:1.5px solid var(--border);} .btn-ghost:hover{color:var(--red);border-color:var(--red);}
+
+#map{flex:1;z-index:1;}
+
+.sidebar{position:absolute;top:56px;left:13px;width:272px;z-index:800;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-height:calc(100vh - 68px);overflow-y:auto;padding-bottom:12px;transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s;}
+.sidebar::-webkit-scrollbar{width:0;}
+.sidebar.hidden{transform:translateX(-310px);opacity:0;pointer-events:none;}
+
+/* Toggle button */
+.sidebar-toggle{position:absolute;top:calc(56px + 40%);left:13px;z-index:900;width:28px;height:52px;background:var(--panel);border:1.5px solid var(--border);border-radius:0 8px 8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);transition:left .3s cubic-bezier(.4,0,.2,1),background .15s;color:var(--muted);}
+.sidebar-toggle:hover{background:#fff;color:var(--ink);}
+.sidebar-toggle svg{transition:transform .3s;}
+.sidebar-toggle.open{left:295px;}
+.sidebar-toggle.open svg{transform:rotate(180deg);}
+.panel{background:var(--panel);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);pointer-events:all;flex-shrink:0;}
+.panel-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-family:'DM Mono',monospace;display:flex;align-items:center;justify-content:space-between;}
+
+.chips{display:flex;flex-wrap:wrap;gap:5px;}
+.chip{padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);background:#fff;color:var(--ink);font-size:11px;cursor:pointer;transition:all .15s;font-family:'Noto Sans KR',sans-serif;}
+.chip:hover{border-color:var(--blue);color:var(--blue);}
+
+.itabs{display:flex;border-radius:8px;overflow:hidden;border:1.5px solid var(--border);margin-bottom:10px;}
+.itab{flex:1;padding:7px 0;text-align:center;font-size:11px;font-weight:700;cursor:pointer;background:#fff;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:4px;border:none;font-family:'Noto Sans KR',sans-serif;transition:all .15s;}
+.itab:first-child{border-right:1.5px solid var(--border);}
+.itab.on-excel{background:#f0fdf4;color:var(--excel);}
+.itab.on-sheets{background:#e8f5e9;color:var(--sheets);}
+
+.tab-pane{display:none;} .tab-pane.active{display:block;}
+
+.drop-zone{border:2px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;transition:all .2s;background:#fff;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--excel);background:#f0fdf4;}
+.drop-zone p{font-size:11px;color:var(--muted);line-height:1.5;}
+.drop-zone p strong{color:var(--excel);}
+.drop-zone.loaded{border-color:var(--excel);background:#f0fdf4;}
+
+.gs-label{font-size:11px;font-weight:600;color:var(--ink);margin-bottom:5px;}
+.gs-input{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-size:11px;font-family:'DM Mono',monospace;color:var(--ink);outline:none;transition:border-color .2s;margin-bottom:6px;}
+.gs-input:focus{border-color:var(--sheets);}
+.gs-input::placeholder{color:var(--muted);font-size:10px;}
+.gs-btn{width:100%;padding:8px;background:var(--sheets);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Noto Sans KR',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;}
+.gs-btn:hover{background:#0b8043;}
+.gs-btn:disabled{background:var(--muted);cursor:not-allowed;}
+.gs-help{font-size:10px;color:var(--muted);line-height:1.7;background:#f8f8f8;border-radius:7px;padding:8px 10px;border:1px solid var(--border);margin-top:8px;}
+.gs-help b{color:var(--ink);}
+.gs-help code{background:#e8f5e9;color:var(--sheets);padding:1px 4px;border-radius:3px;font-family:'DM Mono',monospace;font-size:9px;}
+
+.col-map{margin-top:9px;display:none;} .col-map.on{display:block;}
+.col-map-title{font-size:11px;font-weight:600;color:var(--ink);margin-bottom:6px;}
+.col-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.col-lbl{width:36px;font-size:11px;font-weight:600;color:var(--ink);flex-shrink:0;}
+.col-row select{flex:1;padding:4px 7px;border:1.5px solid var(--border);border-radius:6px;background:#fff;font-size:11px;font-family:'Noto Sans KR',sans-serif;outline:none;color:var(--ink);}
+.btn-add{width:100%;padding:8px;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Noto Sans KR',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;color:#fff;transition:all .15s;}
+.btn-add-e{background:var(--excel);} .btn-add-e:hover{background:#1a5c38;}
+.btn-add-s{background:var(--sheets);} .btn-add-s:hover{background:#0b8043;}
+
+.prog{display:none;margin-top:8px;} .prog.on{display:block;}
+.prog-bg{background:var(--border);border-radius:4px;height:5px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:4px;width:0%;transition:width .2s;}
+.prog-txt{font-size:10px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace;}
+
+.mlist{display:flex;flex-direction:column;gap:5px;max-height:175px;overflow-y:auto;}
+.mlist::-webkit-scrollbar{width:4px;}
+.mlist::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.mitem{display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:8px;background:#fff;border:1.5px solid var(--border);cursor:pointer;transition:all .15s;}
+.mitem:hover{border-color:var(--blue);}
+.mdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.mname{font-size:11px;color:var(--ink);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.msrc{font-size:9px;padding:1px 5px;border-radius:4px;font-family:'DM Mono',monospace;flex-shrink:0;}
+.src-e{background:#dcfce7;color:var(--excel);}
+.src-s{background:#d1fae5;color:var(--sheets);}
+.src-m{background:#f1f5f9;color:var(--muted);}
+.mdel{font-size:12px;color:var(--muted);cursor:pointer;flex-shrink:0;} .mdel:hover{color:var(--red);}
+
+.loc-pulse{width:18px;height:18px;border-radius:50%;background:rgba(37,99,235,.25);border:3px solid var(--blue);animation:pulse 2s ease-out infinite;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,99,235,.4);}70%{box-shadow:0 0 0 12px rgba(37,99,235,0);}100%{box-shadow:0 0 0 0 rgba(37,99,235,0);}}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;padding:9px 18px;border-radius:10px;font-size:13px;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.ok{background:var(--green);}
+.toast.err{background:var(--red);}
+
+@media(max-width:600px){.sidebar{width:calc(100vw - 26px);} header{padding:8px 12px;gap:8px;}}
+
+/* ── Map action buttons (right side) ── */
+.map-actions{
+  position:absolute;bottom:30px;right:16px;z-index:900;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.map-fab{
+  width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 16px rgba(0,0,0,0.2);
+  transition:all .2s;
+  flex-shrink:0;
+}
+.map-fab:active{transform:scale(.93);}
+.fab-loc{
+  width:60px;height:60px;
+  background:var(--blue);color:#fff;
+  box-shadow:0 6px 24px rgba(37,99,235,.5);
+}
+.fab-loc:hover{background:#1d4ed8;box-shadow:0 8px 28px rgba(37,99,235,.6);}
+.fab-loc:active{transform:scale(.9);}
+.fab-compass{background:var(--panel);color:var(--muted);border:2px solid var(--border);}
+.fab-compass:hover{border-color:var(--blue);color:var(--blue);}
+.fab-compass.active{background:#eff6ff;border-color:var(--blue);color:var(--blue);box-shadow:0 0 0 4px rgba(37,99,235,.15);}
+
+/* Compass dial */
+.compass-dial{
+  width:64px;height:64px;border-radius:50%;
+  background:var(--panel);border:2px solid var(--border);
+  box-shadow:0 4px 16px rgba(0,0,0,.18);
+  position:relative;cursor:pointer;
+  display:none;align-items:center;justify-content:center;
+  transition:border-color .2s;
+}
+.compass-dial.show{display:flex;}
+.compass-dial.active{border-color:var(--blue);}
+.compass-n,.compass-s,.compass-e,.compass-w{
+  position:absolute;font-family:'DM Mono',monospace;font-size:8px;font-weight:700;
+}
+.compass-n{top:5px;left:50%;transform:translateX(-50%);color:var(--red);}
+.compass-s{bottom:5px;left:50%;transform:translateX(-50%);color:var(--muted);}
+.compass-e{right:6px;top:50%;transform:translateY(-50%);color:var(--muted);}
+.compass-w{left:6px;top:50%;transform:translateY(-50%);color:var(--muted);}
+.compass-needle{
+  position:absolute;width:4px;height:46px;
+  top:50%;left:50%;transform:translate(-50%,-50%) rotate(0deg);
+  transform-origin:center center;
+  transition:transform .12s ease-out;
+}
+.needle-n{position:absolute;top:0;left:0;right:0;height:50%;background:var(--red);clip-path:polygon(50% 0%,100% 100%,0% 100%);}
+.needle-s{position:absolute;bottom:0;left:0;right:0;height:50%;background:#c8c4bc;clip-path:polygon(0% 0%,100% 0%,50% 100%);}
+.needle-center{position:absolute;top:50%;left:50%;width:7px;height:7px;border-radius:50%;background:var(--ink);transform:translate(-50%,-50%);z-index:2;}
+
+/* Degree badge */
+.compass-deg{
+  background:var(--panel);border:1.5px solid var(--border);
+  border-radius:8px;padding:3px 9px;
+  font-family:'DM Mono',monospace;font-size:11px;font-weight:500;
+  color:var(--ink);box-shadow:var(--shadow);
+  text-align:center;display:none;white-space:nowrap;
+}
+.compass-deg.show{display:block;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">지도<em>·</em>앱</div>
+  <div class="search-wrap">
+    <input class="search-input" id="searchInput" type="text" placeholder="장소 또는 주소 검색..."/>
+    <button class="btn btn-blue" onclick="searchPlace()">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>검색
+    </button>
+  </div>
+  <button class="btn btn-red" onclick="getMyLocation()">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>내 위치
+  </button>
+  <button class="btn btn-ghost" onclick="clearAll()">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>초기화
+  </button>
+</header>
+
+<div id="map"></div>
+
+<!-- Sidebar toggle -->
+<button class="sidebar-toggle open" id="sidebarToggle" onclick="toggleSidebar()" title="메뉴 숨기기/보이기">
+  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+    <polyline points="15 18 9 12 15 6"/>
+  </svg>
+</button>
+
+<!-- Map action buttons (right side, bottom) -->
+<div class="map-actions">
+  <!-- Compass (hidden until activated) -->
+  <div class="compass-deg" id="compassDeg"></div>
+  <div class="compass-dial" id="compassDial" onclick="toggleCompass()">
+    <span class="compass-n">N</span>
+    <span class="compass-s">S</span>
+    <span class="compass-e">E</span>
+    <span class="compass-w">W</span>
+    <div class="compass-needle" id="compassNeedle">
+      <div class="needle-n"></div>
+      <div class="needle-s"></div>
+    </div>
+    <div class="needle-center"></div>
+  </div>
+  <!-- Compass toggle FAB -->
+  <button class="map-fab fab-compass" id="fabCompass" onclick="toggleCompass()" title="나침반 켜기/끄기">
+    🧭
+  </button>
+  <!-- Current location FAB — large, always visible -->
+  <button class="map-fab fab-loc" id="fabLoc" onclick="getMyLocation()" title="현재 위치">
+    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3" fill="currentColor"/>
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+      <circle cx="12" cy="12" r="7" stroke-dasharray="2 3" opacity=".5"/>
+    </svg>
+  </button>
+</div>
+
+<div class="sidebar" id="sidebar">
+
+  <!-- Quick search -->
+  <div class="panel">
+    <div class="panel-title">빠른 검색</div>
+    <div class="chips">
+      <div class="chip" onclick="qs('경복궁, 서울')">경복궁</div>
+      <div class="chip" onclick="qs('남산타워, 서울')">남산타워</div>
+      <div class="chip" onclick="qs('해운대, 부산')">해운대</div>
+      <div class="chip" onclick="qs('제주도')">제주도</div>
+      <div class="chip" onclick="qs('홍대, 서울')">홍대</div>
+    </div>
+  </div>
+
+  <!-- Import Panel -->
+  <div class="panel">
+    <div class="panel-title">데이터 불러오기</div>
+
+    <div class="itabs">
+      <button class="itab on-excel" id="tabExcel" onclick="switchTab('excel')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        엑셀
+      </button>
+      <button class="itab" id="tabSheets" onclick="switchTab('sheets')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        구글 시트
+      </button>
+    </div>
+
+    <!-- Excel pane -->
+    <div class="tab-pane active" id="paneExcel">
+      <div class="drop-zone" id="dropZone"
+        onclick="document.getElementById('fileInput').click()"
+        ondragover="onDragOver(event)" ondragleave="onDragLeave()" ondrop="onDrop(event)">
+        <svg width="26" height="26" fill="none" stroke="#217346" stroke-width="1.5" viewBox="0 0 24 24" style="display:block;margin:0 auto 6px">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/>
+        </svg>
+        <p><strong>.xlsx / .xls</strong> 파일을 끌어다 놓거나<br>클릭해서 선택하세요</p>
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="handleFile(event)"/>
+      <div class="col-map" id="excelColMap">
+        <div class="col-map-title">📋 컬럼 매핑</div>
+        <div class="col-row"><span class="col-lbl">이름</span><select id="eColName"></select></div>
+        <div class="col-row"><span class="col-lbl">위도</span><select id="eColLat"></select></div>
+        <div class="col-row"><span class="col-lbl">경도</span><select id="eColLng"></select></div>
+        <div class="col-row"><span class="col-lbl">메모</span><select id="eColNote"><option value="">— 없음 —</option></select></div>
+        <button class="btn-add btn-add-e" onclick="importExcel()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>마커 추가
+        </button>
+        <div class="prog" id="excelProg">
+          <div class="prog-bg"><div class="prog-fill" id="excelFill" style="background:var(--excel)"></div></div>
+          <div class="prog-txt" id="excelTxt"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Google Sheets pane -->
+    <div class="tab-pane" id="paneSheets">
+      <div class="gs-label">구글 시트 URL 또는 시트 ID</div>
+      <input class="gs-input" id="gsUrl" placeholder="https://docs.google.com/spreadsheets/d/..."/>
+      <button class="gs-btn" id="gsLoadBtn" onclick="loadGoogleSheets()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        데이터 불러오기
+      </button>
+
+      <div class="gs-help">
+        <b>📌 사용 방법</b><br>
+        ① 구글 시트 상단 <b>공유</b> 버튼 클릭<br>
+        ② <b>링크가 있는 모든 사용자</b> → 뷰어로 설정<br>
+        ③ URL을 위 입력창에 붙여넣기<br><br>
+        <b>📋 권장 컬럼 형식</b><br>
+        <code>이름</code>&nbsp;<code>위도</code>&nbsp;<code>경도</code>&nbsp;<code>메모</code>
+      </div>
+
+      <div class="col-map" id="sheetsColMap">
+        <div class="col-map-title">📋 컬럼 매핑</div>
+        <div class="col-row"><span class="col-lbl">이름</span><select id="sColName"></select></div>
+        <div class="col-row"><span class="col-lbl">위도</span><select id="sColLat"></select></div>
+        <div class="col-row"><span class="col-lbl">경도</span><select id="sColLng"></select></div>
+        <div class="col-row"><span class="col-lbl">메모</span><select id="sColNote"><option value="">— 없음 —</option></select></div>
+        <button class="btn-add btn-add-s" onclick="importSheets()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>마커 추가
+        </button>
+        <div class="prog" id="sheetsProg">
+          <div class="prog-bg"><div class="prog-fill" id="sheetsFill" style="background:var(--sheets)"></div></div>
+          <div class="prog-txt" id="sheetsTxt"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Marker list -->
+  <div class="panel">
+    <div class="panel-title">
+      마커 목록
+      <span id="markerCount" style="color:var(--red);"></span>
+    </div>
+    <div class="mlist" id="mlist">
+      <div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0;">아직 마커가 없습니다</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ── Sidebar toggle ──
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const btn=document.getElementById('sidebarToggle');
+  const hidden=sb.classList.toggle('hidden');
+  btn.classList.toggle('open',!hidden);
+  btn.title=hidden?'메뉴 보이기':'메뉴 숨기기';
+  if(hidden){btn.style.left='13px';}else{btn.style.left='295px';}
+}
+
+// ── Map ──
+const map = L.map('map', { center:[37.5665,126.9780], zoom:13 });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution:'© OpenStreetMap contributors', maxZoom:19
+}).addTo(map);
+
+// ── State ──
+let markers = [];
+let excelRows=[], excelHeaders=[];
+let sheetsRows=[], sheetsHeaders=[];
+let locMarker=null, locCircle=null;
+const COLORS=['#e84545','#2563eb','#16a34a','#d97706','#7c3aed','#0891b2','#db2777','#ea580c','#065f46','#1e3a5f'];
+
+// ── Icons ──
+function mkIcon(color){
+  return L.divIcon({
+    className:'',
+    html:`<div style="width:26px;height:26px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.28);"></div>`,
+    iconSize:[26,26],iconAnchor:[13,26],popupAnchor:[0,-28]
+  });
+}
+const locIcon=L.divIcon({className:'',html:`<div class="loc-pulse"></div>`,iconSize:[18,18],iconAnchor:[9,9]});
+
+// ── Toast ──
+let toastT;
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className='toast show'+(type?' '+type:'');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ── Markers ──
+function addMarker(lat,lng,name,note,src,color){
+  color=color||COLORS[markers.length%COLORS.length];
+  const popup=`<b>${name}</b>${note?`<br><small>${note}</small>`:''}<br><small style="color:#888">${lat.toFixed(5)}, ${lng.toFixed(5)}</small>`;
+  const m=L.marker([lat,lng],{icon:mkIcon(color)}).addTo(map).bindPopup(popup);
+  markers.push({id:Date.now()+Math.random(),lat,lng,name,note,src,color,lf:m});
+  renderList();
+}
+function removeMarker(id){
+  const i=markers.findIndex(m=>m.id===id);
+  if(i<0)return;
+  map.removeLayer(markers[i].lf);markers.splice(i,1);renderList();
+}
+function clearAll(){
+  markers.forEach(m=>map.removeLayer(m.lf));markers=[];renderList();toast('모든 마커 삭제됨');
+}
+function renderList(){
+  const list=document.getElementById('mlist');
+  const cnt=document.getElementById('markerCount');
+  cnt.textContent=markers.length?`(${markers.length})`:'';
+  if(!markers.length){
+    list.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0;">아직 마커가 없습니다</div>';
+    return;
+  }
+  const srcLabel={e:'엑셀',s:'시트',m:'직접'};
+  list.innerHTML=markers.map(m=>`
+    <div class="mitem" onclick="flyTo(${m.lat},${m.lng})">
+      <div class="mdot" style="background:${m.color}"></div>
+      <div class="mname">${m.name}</div>
+      <span class="msrc src-${m.src}">${srcLabel[m.src]||m.src}</span>
+      <div class="mdel" onclick="event.stopPropagation();removeMarker(${m.id})">✕</div>
+    </div>`).join('');
+}
+function flyTo(lat,lng){map.flyTo([lat,lng],15,{duration:1});}
+
+// ── Map click ──
+map.on('click',e=>{
+  addMarker(e.latlng.lat,e.latlng.lng,`위치 ${markers.length+1}`,'','m');
+  toast('📍 마커 추가됨 (클릭)');
+});
+
+// ── Geocode ──
+async function geocode(q){
+  const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`,{headers:{'Accept-Language':'ko'}});
+  const d=await r.json();return d[0]||null;
+}
+
+// ── Search ──
+async function searchPlace(){
+  const q=document.getElementById('searchInput').value.trim();
+  if(!q)return;
+  toast('검색 중...');
+  try{
+    const r=await geocode(q);
+    if(!r){toast('결과 없음 😢','err');return;}
+    const lat=parseFloat(r.lat),lng=parseFloat(r.lon),name=r.display_name.split(',')[0];
+    map.flyTo([lat,lng],15,{duration:1.2});
+    addMarker(lat,lng,name,'','m');
+    toast(`📍 ${name}`,'ok');
+    document.getElementById('searchInput').value='';
+  }catch{toast('검색 오류','err');}
+}
+function qs(q){document.getElementById('searchInput').value=q;searchPlace();}
+document.getElementById('searchInput').addEventListener('keydown',e=>{if(e.key==='Enter')searchPlace();});
+
+// ── My location ──
+function getMyLocation(){
+  if(!navigator.geolocation){toast('위치 서비스 미지원','err');return;}
+  toast('위치 확인 중...');
+  navigator.geolocation.getCurrentPosition(
+    ({coords:{latitude:lat,longitude:lng,accuracy}})=>{
+      if(locMarker){map.removeLayer(locMarker);map.removeLayer(locCircle);}
+      locCircle=L.circle([lat,lng],{radius:accuracy,color:'#2563eb',fillColor:'#2563eb',fillOpacity:.08,weight:1}).addTo(map);
+      locMarker=L.marker([lat,lng],{icon:locIcon}).addTo(map)
+        .bindPopup(`<b>📍 현재 위치</b><br><small>정확도 ±${Math.round(accuracy)}m</small>`).openPopup();
+      map.flyTo([lat,lng],16,{duration:1.5});
+      toast('✅ 현재 위치 확인!','ok');
+    },
+    ()=>toast('위치 권한을 허용해 주세요','err'),
+    {enableHighAccuracy:true,timeout:10000}
+  );
+}
+
+// ── Tab switch ──
+function switchTab(t){
+  document.getElementById('paneExcel').classList.toggle('active',t==='excel');
+  document.getElementById('paneSheets').classList.toggle('active',t==='sheets');
+  document.getElementById('tabExcel').className='itab'+(t==='excel'?' on-excel':'');
+  document.getElementById('tabSheets').className='itab'+(t==='sheets'?' on-sheets':'');
+}
+
+// ── Excel drag & drop ──
+function onDragOver(e){e.preventDefault();document.getElementById('dropZone').classList.add('drag-over');}
+function onDragLeave(){document.getElementById('dropZone').classList.remove('drag-over');}
+function onDrop(e){e.preventDefault();document.getElementById('dropZone').classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)parseExcel(f);}
+function handleFile(e){const f=e.target.files[0];if(f)parseExcel(f);}
+
+function parseExcel(file){
+  if(!file.name.match(/\.(xlsx|xls)$/i)){toast('.xlsx/.xls 파일만 지원','err');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length<2){toast('데이터가 없습니다','err');return;}
+      excelHeaders=rows[0].map(h=>String(h).trim());
+      excelRows=rows.slice(1).filter(r=>r.some(c=>c!==''));
+      populateSelects(excelHeaders,'e');
+      autoDetect(excelHeaders,'e');
+      document.getElementById('excelColMap').classList.add('on');
+      document.getElementById('dropZone').classList.add('loaded');
+      document.getElementById('dropZone').innerHTML=`
+        <svg width="22" height="22" fill="none" stroke="var(--excel)" stroke-width="2" viewBox="0 0 24 24" style="display:block;margin:0 auto 5px"><polyline points="20 6 9 17 4 12"/></svg>
+        <p style="color:var(--excel);font-weight:700">${file.name}</p>
+        <p>${excelRows.length}개 행 로드됨</p>`;
+      toast(`✅ ${excelRows.length}개 행 불러오기 완료`,'ok');
+    }catch(err){toast('파일 읽기 오류','err');console.error(err);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function importExcel(){
+  const ni=excelHeaders.indexOf(document.getElementById('eColName').value);
+  const li=excelHeaders.indexOf(document.getElementById('eColLat').value);
+  const gi=excelHeaders.indexOf(document.getElementById('eColLng').value);
+  const nv=document.getElementById('eColNote').value;
+  const oi=nv?excelHeaders.indexOf(nv):-1;
+  if(ni<0||li<0||gi<0){toast('이름/위도/경도 컬럼을 선택하세요','err');return;}
+  const valid=excelRows.filter(r=>!isNaN(parseFloat(r[li]))&&!isNaN(parseFloat(r[gi])));
+  if(!valid.length){toast('유효한 좌표 데이터가 없습니다','err');return;}
+  runImport(valid,ni,li,gi,oi,'e','excelFill','excelTxt','excelProg');
+}
+
+// ── Google Sheets ──
+function extractSheetId(url){
+  url=url.trim();
+  const m=url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if(m)return m[1];
+  if(/^[a-zA-Z0-9-_]+$/.test(url))return url;
+  return null;
+}
+
+// CSV parser (handles quoted fields with commas)
+function parseCSV(text){
+  const rows=[];
+  for(const line of text.split(/\r?\n/)){
+    if(!line.trim())continue;
+    const cols=[];let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+      else if(c===','&&!inQ){cols.push(cur.trim());cur='';}
+      else cur+=c;
+    }
+    cols.push(cur.trim());
+    rows.push(cols);
+  }
+  return rows;
+}
+
+async function loadGoogleSheets(){
+  const url=document.getElementById('gsUrl').value.trim();
+  if(!url){toast('URL 또는 시트 ID를 입력하세요','err');return;}
+  const id=extractSheetId(url);
+  if(!id){toast('올바른 구글 시트 URL이 아닙니다','err');return;}
+
+  const btn=document.getElementById('gsLoadBtn');
+  btn.disabled=true;
+  btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> 불러오는 중...';
+  toast('구글 시트 불러오는 중...');
+
+  // Google Sheets CSV export (requires public share)
+  const csvUrl=`https://docs.google.com/spreadsheets/d/${id}/export?format=csv`;
+  try{
+    const res=await fetch(csvUrl);
+    if(!res.ok){
+      if(res.status===403||res.status===401)
+        throw new Error('접근 권한 없음 — 시트를 공개(링크 공유)로 설정해 주세요');
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const text=await res.text();
+    const rows=parseCSV(text);
+    if(rows.length<2){toast('데이터가 없거나 시트가 비어 있습니다','err');return;}
+    sheetsHeaders=rows[0].map(h=>String(h).trim());
+    sheetsRows=rows.slice(1).filter(r=>r.some(c=>String(c).trim()!==''));
+    populateSelects(sheetsHeaders,'s');
+    autoDetect(sheetsHeaders,'s');
+    document.getElementById('sheetsColMap').classList.add('on');
+    toast(`✅ ${sheetsRows.length}개 행 불러오기 완료`,'ok');
+  }catch(err){
+    console.error(err);
+    toast(err.message||'불러오기 실패 — 시트 공개 여부를 확인하세요','err');
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML='<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> 데이터 불러오기';
+  }
+}
+
+function importSheets(){
+  const ni=sheetsHeaders.indexOf(document.getElementById('sColName').value);
+  const li=sheetsHeaders.indexOf(document.getElementById('sColLat').value);
+  const gi=sheetsHeaders.indexOf(document.getElementById('sColLng').value);
+  const nv=document.getElementById('sColNote').value;
+  const oi=nv?sheetsHeaders.indexOf(nv):-1;
+  if(ni<0||li<0||gi<0){toast('이름/위도/경도 컬럼을 선택하세요','err');return;}
+  const valid=sheetsRows.filter(r=>!isNaN(parseFloat(r[li]))&&!isNaN(parseFloat(r[gi])));
+  if(!valid.length){toast('유효한 좌표 데이터가 없습니다','err');return;}
+  runImport(valid,ni,li,gi,oi,'s','sheetsFill','sheetsTxt','sheetsProg');
+}
+
+// ── Shared import runner ──
+function runImport(rows,ni,li,gi,oi,src,fillId,txtId,progId){
+  const prog=document.getElementById(progId);
+  const fill=document.getElementById(fillId);
+  const txt=document.getElementById(txtId);
+  prog.classList.add('on');
+  let count=0;
+  const bounds=[];
+  rows.forEach((r,idx)=>{
+    setTimeout(()=>{
+      const lat=parseFloat(r[li]),lng=parseFloat(r[gi]);
+      const name=String(r[ni]||`위치 ${idx+1}`).trim();
+      const note=oi>=0?String(r[oi]||'').trim():'';
+      addMarker(lat,lng,name,note,src);
+      bounds.push([lat,lng]);
+      count++;
+      fill.style.width=Math.round(count/rows.length*100)+'%';
+      txt.textContent=`${count} / ${rows.length}`;
+      if(count===rows.length){
+        if(bounds.length)map.fitBounds(bounds,{padding:[40,40],maxZoom:14});
+        toast(`✅ ${count}개 마커 추가 완료`,'ok');
+        setTimeout(()=>prog.classList.remove('on'),2000);
+      }
+    },idx*25);
+  });
+}
+
+// ── Column helpers ──
+function populateSelects(headers,prefix){
+  ['Name','Lat','Lng','Note'].forEach(k=>{
+    const sel=document.getElementById(`${prefix}Col${k}`);
+    const prev=sel.value;
+    sel.innerHTML=k==='Note'?'<option value="">— 없음 —</option>':'';
+    headers.forEach(h=>{const o=document.createElement('option');o.value=h;o.textContent=h;sel.appendChild(o);});
+    if(prev&&headers.includes(prev))sel.value=prev;
+  });
+}
+// ── Compass (Android DeviceOrientationEvent) ──
+let compassOn = false;
+let lastHeading = 0;
+
+function toggleCompass(){
+  if(!compassOn) startCompass();
+  else stopCompass();
+}
+
+function startCompass(){
+  if(!window.DeviceOrientationEvent){
+    toast('이 기기는 나침반을 지원하지 않습니다','err'); return;
+  }
+  window.addEventListener('deviceorientationabsolute', onOrientation, true);
+  window.addEventListener('deviceorientation', onOrientation, true);
+  compassOn = true;
+  document.getElementById('compassDial').classList.add('active');
+  document.getElementById('compassDeg').classList.add('show');
+  document.getElementById('fabCompass').classList.add('active');
+  toast('🧭 나침반 켜짐','ok');
+}
+
+function stopCompass(){
+  window.removeEventListener('deviceorientationabsolute', onOrientation, true);
+  window.removeEventListener('deviceorientation', onOrientation, true);
+  compassOn = false;
+  document.getElementById('compassDial').classList.remove('active');
+  document.getElementById('compassDeg').classList.remove('show');
+  document.getElementById('fabCompass').classList.remove('active');
+  document.getElementById('compassDeg').textContent = '';
+  document.getElementById('compassNeedle').style.transform = 'translate(-50%,-50%) rotate(0deg)';
+  toast('나침반 꺼짐');
+}
+
+function onOrientation(e){
+  let heading = null;
+  if(e.webkitCompassHeading != null){
+    heading = e.webkitCompassHeading;
+  } else if(e.alpha != null){
+    heading = 360 - e.alpha;
+  }
+  if(heading == null) return;
+  heading = (heading + 360) % 360;
+
+  let diff = heading - lastHeading;
+  if(diff > 180) diff -= 360;
+  if(diff < -180) diff += 360;
+  lastHeading = (lastHeading + diff * 0.3 + 360) % 360;
+
+  document.getElementById('compassNeedle').style.transform =
+    `translate(-50%,-50%) rotate(${lastHeading}deg)`;
+
+  const dirs = ['N','NE','E','SE','S','SW','W','NW','N'];
+  const dir = dirs[Math.round(lastHeading / 45)];
+  document.getElementById('compassDeg').textContent =
+    `${Math.round(lastHeading)}° ${dir}`;
+}
+</script>
+</body>
+</html>
