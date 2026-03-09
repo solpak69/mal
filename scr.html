@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SCREENREC — Browser Capture Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #080808;
+    --panel: #101010;
+    --border: #1e1e1e;
+    --text: #d8d8d8;
+    --muted: #444;
+    --accent: #1d4ed8;
+    --accent-hi: #3b82f6;
+    --red: #dc2626;
+    --red-muted: #7f1d1d;
+    --green: #15803d;
+    --green-hi: #86efac;
+    --amber: #d97706;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  .app { width: 100%; max-width: 620px; }
+
+  /* ── Header ── */
+  .header { text-align: center; margin-bottom: 48px; animation: fadeUp 0.6s ease; }
+  .header-sub { font-size: 10px; letter-spacing: 0.5em; color: var(--muted); margin-bottom: 10px; }
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(52px, 10vw, 80px);
+    letter-spacing: 0.04em;
+    color: #fff;
+    line-height: 1;
+  }
+  .header h1 span { color: var(--accent-hi); }
+  .header-tag { font-size: 10px; color: #2a2a2a; letter-spacing: 0.25em; margin-top: 6px; }
+
+  /* ── Panel ── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    margin-bottom: 12px;
+    animation: fadeUp 0.4s ease;
+  }
+  .panel-label {
+    font-size: 9px;
+    letter-spacing: 0.4em;
+    color: var(--muted);
+    padding: 12px 18px 0;
+  }
+
+  /* ── Status Bar ── */
+  .status-bar {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .status-indicator { display: flex; align-items: center; font-size: 13px; }
+  .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--red);
+    margin-right: 10px;
+    animation: pulse 1s infinite;
+  }
+  .status-rec { color: var(--red); }
+  .status-paused { color: var(--amber); }
+  .status-idle { color: #2e2e2e; }
+  .status-done { color: #22c55e; }
+  .timer {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 0.05em;
+    color: #fff;
+    transition: color 0.3s;
+  }
+  .timer.dim { color: #252525; }
+
+  /* ── Settings ── */
+  .settings-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .setting-row { display: flex; align-items: center; justify-content: space-between; }
+  .setting-label { font-size: 12px; color: #666; }
+
+  .toggle-wrap { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .track {
+    width: 42px; height: 22px; border-radius: 11px;
+    background: #1a1a1a; border: 1px solid #2a2a2a;
+    position: relative; transition: background 0.2s, border-color 0.2s;
+  }
+  .track.on { background: var(--accent); border-color: var(--accent); }
+  .thumb {
+    position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; transition: transform 0.2s;
+  }
+  .track.on .thumb { transform: translateX(20px); }
+  .toggle-state { font-size: 11px; color: var(--muted); min-width: 24px; }
+  .track.on ~ .toggle-state { color: var(--accent-hi); }
+
+  select {
+    background: #0d0d0d;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 7px 14px;
+    border-radius: 3px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+  }
+  select:focus { border-color: #333; }
+
+  /* ── Live Preview ── */
+  .preview-body { padding: 0 12px 12px; }
+  .preview-body video, .playback-body video {
+    width: 100%; border-radius: 2px;
+    background: #000; display: block;
+    max-height: 280px; object-fit: contain;
+  }
+  .playback-body { padding: 0 12px 12px; }
+
+  /* ── Error ── */
+  .error-bar {
+    padding: 14px 20px;
+    border-color: var(--red-muted);
+    background: #0d0505;
+    font-size: 12px;
+    color: #f87171;
+  }
+
+  /* ── Controls ── */
+  .controls { display: flex; gap: 10px; margin-bottom: 12px; }
+  .btn {
+    flex: 1;
+    padding: 16px 12px;
+    border: none;
+    border-radius: 3px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-weight: 700;
+    transition: filter 0.15s, transform 0.1s;
+  }
+  .btn:hover { filter: brightness(1.18); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); filter: brightness(0.9); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: #131313; color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: var(--red-muted); color: #fca5a5; }
+  .btn-success { background: var(--green); color: var(--green-hi); }
+
+  /* ── Footer note ── */
+  .foot { text-align: center; font-size: 10px; color: #252525; line-height: 1.8; letter-spacing: 0.05em; }
+
+  /* ── Animations ── */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-sub">BROWSER NATIVE</div>
+    <h1>SCREEN<span>REC</span></h1>
+    <div class="header-tag">CAPTURE ENGINE v1.0 · WEBM OUTPUT</div>
+  </div>
+
+  <!-- Status -->
+  <div class="panel">
+    <div class="status-bar">
+      <div class="status-indicator" id="statusIndicator">
+        <span class="status-idle">● STANDBY</span>
+      </div>
+      <div class="timer dim" id="timer">00:00</div>
+    </div>
+  </div>
+
+  <!-- Live Preview -->
+  <div class="panel hidden" id="livePanel">
+    <div class="panel-label">LIVE PREVIEW</div>
+    <div class="preview-body">
+      <video id="liveVideo" muted autoplay playsinline></video>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="panel" id="settingsPanel">
+    <div class="panel-label">SETTINGS</div>
+    <div class="settings-body">
+      <div class="setting-row">
+        <span class="setting-label">마이크 오디오</span>
+        <div class="toggle-wrap" onclick="toggleAudio()">
+          <div class="track on" id="audioTrack"><div class="thumb"></div></div>
+          <span class="toggle-state" id="audioState">ON</span>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">해상도 (권장)</span>
+        <select id="resSelect">
+          <option value="720">720p</option>
+          <option value="1080" selected>1080p</option>
+          <option value="4k">4K</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="panel error-bar hidden" id="errorBar"></div>
+
+  <!-- Playback -->
+  <div class="panel hidden" id="playbackPanel">
+    <div class="panel-label">PLAYBACK</div>
+    <div class="playback-body">
+      <video id="playbackVideo" controls></video>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls" id="controls">
+    <button class="btn btn-primary" id="startBtn" onclick="startRecording()">● 녹화 시작</button>
+  </div>
+
+  <!-- Footer -->
+  <div class="foot" id="footNote">
+    브라우저가 화면 공유 권한을 요청합니다 · WebM 형식으로 저장됩니다
+  </div>
+
+</div>
+
+<script>
+let mediaRecorder = null;
+let stream = null;
+let chunks = [];
+let timerInterval = null;
+let elapsed = 0;
+let audioEnabled = true;
+let currentStatus = 'idle'; // idle | recording | paused | preview
+let videoURL = null;
+
+const resMap = {
+  '720':  { width: 1280, height: 720 },
+  '1080': { width: 1920, height: 1080 },
+  '4k':   { width: 3840, height: 2160 },
+};
+
+function pad(n) { return String(n).padStart(2,'0'); }
+function formatTime(s) { return pad(Math.floor(s/60)) + ':' + pad(s%60); }
+
+function setTimer(active) {
+  clearInterval(timerInterval);
+  const el = document.getElementById('timer');
+  el.classList.toggle('dim', !active);
+  if (active) {
+    timerInterval = setInterval(() => {
+      elapsed++;
+      el.textContent = formatTime(elapsed);
+    }, 1000);
+  }
+}
+
+function setStatus(s) {
+  currentStatus = s;
+  const ind = document.getElementById('statusIndicator');
+  const timer = document.getElementById('timer');
+  const map = {
+    idle:      '<span class="status-idle">● STANDBY</span>',
+    recording: '<span class="rec-wrap"><span class="dot"></span><span class="status-rec">REC</span></span>',
+    paused:    '<span class="status-paused">⏸ PAUSED</span>',
+    preview:   '<span class="status-done">✓ COMPLETE</span>',
+  };
+  ind.innerHTML = map[s] || map.idle;
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorBar');
+  el.textContent = '⚠ ' + msg;
+  el.classList.remove('hidden');
+}
+function clearError() {
+  document.getElementById('errorBar').classList.add('hidden');
+}
+
+function toggleAudio() {
+  audioEnabled = !audioEnabled;
+  const track = document.getElementById('audioTrack');
+  const state = document.getElementById('audioState');
+  track.classList.toggle('on', audioEnabled);
+  state.textContent = audioEnabled ? 'ON' : 'OFF';
+}
+
+function renderControls() {
+  const ctrl = document.getElementById('controls');
+  const foot = document.getElementById('footNote');
+  if (currentStatus === 'idle') {
+    ctrl.innerHTML = `<button class="btn btn-primary" onclick="startRecording()">● 녹화 시작</button>`;
+    foot.textContent = '브라우저가 화면 공유 권한을 요청합니다 · WebM 형식으로 저장됩니다';
+  } else if (currentStatus === 'recording') {
+    ctrl.innerHTML = `
+      <button class="btn btn-secondary" onclick="pauseResume()">⏸ 일시정지</button>
+      <button class="btn btn-danger" onclick="stopRecording()">■ 정지</button>`;
+    foot.textContent = '녹화 중 · 브라우저 탭, 창, 또는 전체 화면 선택 가능';
+  } else if (currentStatus === 'paused') {
+    ctrl.innerHTML = `
+      <button class="btn btn-secondary" onclick="pauseResume()">▶ 재개</button>
+      <button class="btn btn-danger" onclick="stopRecording()">■ 정지</button>`;
+    foot.textContent = '일시정지됨 · 재개하거나 정지하세요';
+  } else if (currentStatus === 'preview') {
+    ctrl.innerHTML = `
+      <button class="btn btn-success" onclick="downloadVideo()">↓ 다운로드</button>
+      <button class="btn btn-secondary" onclick="reset()">↺ 다시 녹화</button>`;
+    foot.textContent = `녹화 완료 · ${formatTime(elapsed)} · WebM 형식`;
+  }
+}
+
+async function startRecording() {
+  clearError();
+  const res = resMap[document.getElementById('resSelect').value] || resMap['1080'];
+  try {
+    const displayStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { width: res.width, height: res.height, frameRate: 60 },
+      audio: true,
+    });
+
+    let finalStream = displayStream;
+
+    if (audioEnabled) {
+      try {
+        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const ctx = new AudioContext();
+        const dest = ctx.createMediaStreamDestination();
+        if (displayStream.getAudioTracks().length > 0) {
+          ctx.createMediaStreamSource(displayStream).connect(dest);
+        }
+        ctx.createMediaStreamSource(micStream).connect(dest);
+        finalStream = new MediaStream([
+          ...displayStream.getVideoTracks(),
+          ...dest.stream.getAudioTracks(),
+        ]);
+      } catch(e) {
+        finalStream = displayStream;
+      }
+    }
+
+    stream = finalStream;
+    chunks = [];
+
+    // Live preview
+    const liveVideo = document.getElementById('liveVideo');
+    liveVideo.srcObject = displayStream;
+    document.getElementById('livePanel').classList.remove('hidden');
+    document.getElementById('settingsPanel').classList.add('hidden');
+    document.getElementById('playbackPanel').classList.add('hidden');
+
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9' : 'video/webm';
+
+    mediaRecorder = new MediaRecorder(finalStream, { mimeType });
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    mediaRecorder.onstop = onRecordingStop;
+    displayStream.getVideoTracks()[0].onended = () => stopRecording();
+
+    mediaRecorder.start(200);
+    elapsed = 0;
+    document.getElementById('timer').textContent = '00:00';
+    setStatus('recording');
+    setTimer(true);
+    renderControls();
+  } catch(err) {
+    if (err.name !== 'NotAllowedError') {
+      showError('화면 공유를 시작할 수 없습니다: ' + err.message);
+    }
+  }
+}
+
+function pauseResume() {
+  if (!mediaRecorder) return;
+  if (currentStatus === 'recording') {
+    mediaRecorder.pause();
+    setTimer(false);
+    setStatus('paused');
+  } else if (currentStatus === 'paused') {
+    mediaRecorder.resume();
+    setTimer(true);
+    setStatus('recording');
+  }
+  renderControls();
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  setTimer(false);
+}
+
+function onRecordingStop() {
+  const blob = new Blob(chunks, { type: 'video/webm' });
+  if (videoURL) URL.revokeObjectURL(videoURL);
+  videoURL = URL.createObjectURL(blob);
+
+  const playbackVideo = document.getElementById('playbackVideo');
+  playbackVideo.src = videoURL;
+
+  document.getElementById('liveVideo').srcObject = null;
+  document.getElementById('livePanel').classList.add('hidden');
+  document.getElementById('playbackPanel').classList.remove('hidden');
+
+  setStatus('preview');
+  renderControls();
+}
+
+function downloadVideo() {
+  if (!videoURL) return;
+  const a = document.createElement('a');
+  a.href = videoURL;
+  a.download = 'recording_' + Date.now() + '.webm';
+  a.click();
+}
+
+function reset() {
+  if (videoURL) { URL.revokeObjectURL(videoURL); videoURL = null; }
+  chunks = [];
+  elapsed = 0;
+  document.getElementById('timer').textContent = '00:00';
+  document.getElementById('playbackPanel').classList.add('hidden');
+  document.getElementById('livePanel').classList.add('hidden');
+  document.getElementById('settingsPanel').classList.remove('hidden');
+  clearError();
+  setStatus('idle');
+  renderControls();
+}
+</script>
+</body>
+</html>
