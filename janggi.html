@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>장기 게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 10px;
+        }
+        
+        .container {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 900px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 24px;
+        }
+        
+        .game-wrapper {
+            display: flex;
+            gap: 15px;
+            flex-direction: column;
+        }
+        
+        .board-section {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        
+        canvas {
+            border: 2px solid #333;
+            background: #d4a574;
+            display: block;
+            cursor: pointer;
+            border-radius: 5px;
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .info-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        @media (min-width: 768px) {
+            .game-wrapper {
+                flex-direction: row;
+            }
+            
+            .board-section {
+                flex: 1;
+                min-width: 320px;
+            }
+            
+            .info-section {
+                flex: 1;
+                min-width: 250px;
+            }
+        }
+        
+        .info-box {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 12px;
+        }
+        
+        .info-box h3 {
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .info-box p {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        @media (min-width: 768px) {
+            .info-box {
+                padding: 15px;
+            }
+            
+            .info-box h3 {
+                margin-bottom: 10px;
+                font-size: 14px;
+            }
+            
+            .info-box p {
+                font-size: 13px;
+            }
+        }
+        
+        .player-status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .red-player {
+            background: #ffe6e6;
+            color: #c41e3a;
+        }
+        
+        .blue-player {
+            background: #e6f0ff;
+            color: #003da5;
+        }
+        
+        .pieces-list {
+            font-size: 12px;
+            line-height: 1.8;
+            color: #666;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #764ba2;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .moves-log {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            font-family: monospace;
+            line-height: 1.6;
+            color: #666;
+        }
+        
+        .move-item {
+            padding: 4px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .move-red {
+            color: #c41e3a;
+        }
+        
+        .move-blue {
+            color: #003da5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>장기</h1>
+        
+        <div class="game-wrapper">
+            <div class="board-section">
+                <canvas id="boardCanvas"></canvas>
+            </div>
+            
+            <div class="info-section">
+                <div class="player-status" id="playerStatus" class="red-player">
+                    🔴 빨간색 차례
+                </div>
+                
+                <div class="info-box">
+                    <h3>현재 상황</h3>
+                    <p id="gameStatus">게임을 시작하세요</p>
+                </div>
+                
+                <div class="info-box">
+                    <h3>조작법</h3>
+                    <p>
+                        • 말을 클릭 후 이동할 위치를 클릭<br>
+                        • 대사: 보가 이동할 수 있는 경로를 따라야 함<br>
+                        • 처음 상태로 돌리기 버튼으로 리셋 가능
+                    </p>
+                </div>
+                
+                <button onclick="resetGame()">처음부터</button>
+                
+                <div class="info-box">
+                    <h3>기본 규칙</h3>
+                    <p>
+                        <strong>병(兵):</strong> 앞으로 한 칸<br>
+                        <strong>마(馬):</strong> L자 이동<br>
+                        <strong>상(象):</strong> 대각선 7칸<br>
+                        <strong>차(車):</strong> 직선 무제한<br>
+                        <strong>포(砲):</strong> 직선, 포(砲)처럼 뛰기<br>
+                        <strong>사(士):</strong> 대사 내 대각선<br>
+                        <strong>왕(王):</strong> 대사 내 한 칸
+                    </p>
+                </div>
+                
+                <div class="info-box">
+                    <h3>이동 기록</h3>
+                    <div class="moves-log" id="movesLog">
+                        기록이 없습니다
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('boardCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 캔버스 크기 설정
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const maxWidth = Math.min(container.clientWidth - 4, 500);
+            const cellWidth = maxWidth / 9;
+            const cellHeight = cellWidth * 1.167; // 56/48 비율
+            
+            canvas.width = maxWidth;
+            canvas.height = cellHeight * 10;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // 클릭 위치 계산 (반응형)
+        function getClickPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const cellWidth = canvas.width / 9;
+            const cellHeight = canvas.height / 10;
+            
+            const col = Math.floor(x / cellWidth);
+            const row = Math.floor(y / cellHeight);
+            
+            return { row, col };
+        }
+        
+        // 게임 상태
+        let gameState = {
+            turn: 'red', // red or blue
+            selectedPiece: null,
+            selectedPos: null,
+            validMoves: [],
+            moves: [],
+            board: []
+        };
+        
+        // 기물 정의
+        const pieces = {
+            'R': { name: '왕', player: 'red', symbol: '王' },
+            'A': { name: '사', player: 'red', symbol: '士' },
+            'E': { name: '상', player: 'red', symbol: '象' },
+            'H': { name: '마', player: 'red', symbol: '馬' },
+            'C': { name: '차', player: 'red', symbol: '車' },
+            'P': { name: '포', player: 'red', symbol: '砲' },
+            'S': { name: '병', player: 'red', symbol: '兵' },
+            'r': { name: '왕', player: 'blue', symbol: '王' },
+            'a': { name: '사', player: 'blue', symbol: '士' },
+            'e': { name: '상', player: 'blue', symbol: '象' },
+            'h': { name: '마', player: 'blue', symbol: '馬' },
+            'c': { name: '차', player: 'blue', symbol: '車' },
+            'p': { name: '포', player: 'blue', symbol: '砲' },
+            's': { name: '병', player: 'blue', symbol: '兵' }
+        };
+        
+        // 초기 보드 설정
+        function initBoard() {
+            gameState.board = [
+                ['c', 'h', 'e', 'a', 'r', 'a', 'e', 'h', 'c'],
+                ['.', '.', '.', '.', '.', '.', '.', '.', '.'],
+                ['.', 'p', '.', '.', '.', '.', '.', 'p', '.'],
+                ['s', '.', 's', '.', 's', '.', 's', '.', 's'],
+                ['.', '.', '.', '.', '.', '.', '.', '.', '.'],
+                ['.', '.', '.', '.', '.', '.', '.', '.', '.'],
+                ['S', '.', 'S', '.', 'S', '.', 'S', '.', 'S'],
+                ['.', 'P', '.', '.', '.', '.', '.', 'P', '.'],
+                ['.', '.', '.', '.', '.', '.', '.', '.', '.'],
+                ['C', 'H', 'E', 'A', 'R', 'A', 'E', 'H', 'C']
+            ];
+            gameState.turn = 'red';
+            gameState.selectedPiece = null;
+            gameState.selectedPos = null;
+            gameState.validMoves = [];
+            gameState.moves = [];
+        }
+        
+        // 대사 영역 체크 (빨간색: 7~9행, 3~5열 / 파란색: 0~2행, 3~5열)
+        function isPalace(row, col) {
+            return col >= 3 && col <= 5 && ((row >= 7 && row <= 9) || (row >= 0 && row <= 2));
+        }
+        
+        // 유효한 이동 계산
+        function getValidMoves(row, col) {
+            const piece = gameState.board[row][col];
+            if (piece === '.') return [];
+            
+            const type = piece.toUpperCase();
+            const isRed = piece === piece.toUpperCase();
+            const moves = [];
+            
+            function addMove(r, c) {
+                if (r >= 0 && r < 10 && c >= 0 && c < 9) {
+                    const target = gameState.board[r][c];
+                    if (target === '.' || (target !== '.' && isRed !== (target === target.toUpperCase()))) {
+                        moves.push([r, c]);
+                    }
+                }
+            }
+            
+            function addMoveIfEmpty(r, c) {
+                if (r >= 0 && r < 10 && c >= 0 && c < 9 && gameState.board[r][c] === '.') {
+                    moves.push([r, c]);
+                }
+            }
+            
+            // 병(S): 앞으로 + 옆으로 한칸
+            if (type === 'S') {
+                const direction = isRed ? -1 : 1;
+                addMove(row + direction, col);
+                addMove(row, col - 1);
+                addMove(row, col + 1);
+            }
+            // 마(H): L자 이동
+            else if (type === 'H') {
+                const deltas = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+                for (let [dr, dc] of deltas) {
+                    addMove(row + dr, col + dc);
+                }
+            }
+            // 상(E): 대각선 7칸
+            else if (type === 'E') {
+                const deltas = [[-2,-2],[-2,2],[2,-2],[2,2]];
+                for (let [dr, dc] of deltas) {
+                    if (row + dr >= 0 && row + dr < 10 && col + dc >= 0 && col + dc < 9) {
+                        addMove(row + dr, col + dc);
+                    }
+                }
+            }
+            // 차(C): 직선 무제한
+            else if (type === 'C') {
+                for (let i = row - 1; i >= 0; i--) {
+                    if (gameState.board[i][col] === '.') addMoveIfEmpty(i, col);
+                    else { addMove(i, col); break; }
+                }
+                for (let i = row + 1; i < 10; i++) {
+                    if (gameState.board[i][col] === '.') addMoveIfEmpty(i, col);
+                    else { addMove(i, col); break; }
+                }
+                for (let j = col - 1; j >= 0; j--) {
+                    if (gameState.board[row][j] === '.') addMoveIfEmpty(row, j);
+                    else { addMove(row, j); break; }
+                }
+                for (let j = col + 1; j < 9; j++) {
+                    if (gameState.board[row][j] === '.') addMoveIfEmpty(row, j);
+                    else { addMove(row, j); break; }
+                }
+            }
+            // 포(P): 직선, 말을 뛰어넘어야 함
+            else if (type === 'P') {
+                for (let i = row - 1; i >= 0; i--) {
+                    const target = gameState.board[i][col];
+                    if (target === '.') addMoveIfEmpty(i, col);
+                    else {
+                        for (let k = i - 1; k >= 0; k--) {
+                            if (gameState.board[k][col] !== '.' && isRed !== (gameState.board[k][col] === gameState.board[k][col].toUpperCase())) {
+                                moves.push([k, col]);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+                for (let i = row + 1; i < 10; i++) {
+                    const target = gameState.board[i][col];
+                    if (target === '.') addMoveIfEmpty(i, col);
+                    else {
+                        for (let k = i + 1; k < 10; k++) {
+                            if (gameState.board[k][col] !== '.' && isRed !== (gameState.board[k][col] === gameState.board[k][col].toUpperCase())) {
+                                moves.push([k, col]);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+                for (let j = col - 1; j >= 0; j--) {
+                    const target = gameState.board[row][j];
+                    if (target === '.') addMoveIfEmpty(row, j);
+                    else {
+                        for (let k = j - 1; k >= 0; k--) {
+                            if (gameState.board[row][k] !== '.' && isRed !== (gameState.board[row][k] === gameState.board[row][k].toUpperCase())) {
+                                moves.push([row, k]);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+                for (let j = col + 1; j < 9; j++) {
+                    const target = gameState.board[row][j];
+                    if (target === '.') addMoveIfEmpty(row, j);
+                    else {
+                        for (let k = j + 1; k < 9; k++) {
+                            if (gameState.board[row][k] !== '.' && isRed !== (gameState.board[row][k] === gameState.board[row][k].toUpperCase())) {
+                                moves.push([row, k]);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            // 사(A): 대사 내 대각선
+            else if (type === 'A') {
+                const deltas = [[-1,-1],[-1,1],[1,-1],[1,1]];
+                for (let [dr, dc] of deltas) {
+                    const nr = row + dr, nc = col + dc;
+                    if (isPalace(nr, nc)) {
+                        addMove(nr, nc);
+                    }
+                }
+            }
+            // 왕(R): 대사 내 한칸
+            else if (type === 'R') {
+                const deltas = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+                for (let [dr, dc] of deltas) {
+                    const nr = row + dr, nc = col + dc;
+                    if (isPalace(nr, nc)) {
+                        addMove(nr, nc);
+                    }
+                }
+            }
+            
+            return moves;
+        }
+        
+        // 보드 그리기
+        function drawBoard() {
+            const cellWidth = canvas.width / 9;
+            const cellHeight = canvas.height / 10;
+            const centerX = cellWidth / 2;
+            const centerY = cellHeight / 2;
+            
+            ctx.fillStyle = '#d4a574';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            
+            // 격자선
+            for (let i = 0; i <= 10; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * cellHeight);
+                ctx.lineTo(canvas.width, i * cellHeight);
+                ctx.stroke();
+            }
+            for (let j = 0; j <= 9; j++) {
+                ctx.beginPath();
+                ctx.moveTo(j * cellWidth, 0);
+                ctx.lineTo(j * cellWidth, canvas.height);
+                ctx.stroke();
+            }
+            
+            // 대사 영역 표시
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 2;
+            
+            // 빨간색 대사 (7~9행, 3~5열)
+            ctx.strokeRect(3 * cellWidth, 7 * cellHeight, 3 * cellWidth, 3 * cellHeight);
+            // 파란색 대사 (0~2행, 3~5열)
+            ctx.strokeRect(3 * cellWidth, 0, 3 * cellWidth, 3 * cellHeight);
+            
+            // 대각선
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(3 * cellWidth, 7 * cellHeight);
+            ctx.lineTo(6 * cellWidth, 10 * cellHeight);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(6 * cellWidth, 7 * cellHeight);
+            ctx.lineTo(3 * cellWidth, 10 * cellHeight);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(3 * cellWidth, 0);
+            ctx.lineTo(6 * cellWidth, 3 * cellHeight);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(6 * cellWidth, 0);
+            ctx.lineTo(3 * cellWidth, 3 * cellHeight);
+            ctx.stroke();
+            
+            // 기물 그리기
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const piece = gameState.board[i][j];
+                    if (piece !== '.') {
+                        drawPiece(i, j, piece, cellWidth, cellHeight);
+                    }
+                }
+            }
+            
+            // 선택된 기물 하이라이트
+            if (gameState.selectedPos) {
+                const [r, c] = gameState.selectedPos;
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                ctx.fillRect(c * cellWidth + 2, r * cellHeight + 2, cellWidth - 4, cellHeight - 4);
+            }
+            
+            // 유효한 이동 표시
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+            for (let [r, c] of gameState.validMoves) {
+                ctx.fillRect(c * cellWidth + 2, r * cellHeight + 2, cellWidth - 4, cellHeight - 4);
+            }
+        }
+        
+        // 기물 그리기
+        function drawPiece(row, col, piece, cellWidth, cellHeight) {
+            const x = col * cellWidth + cellWidth / 2;
+            const y = row * cellHeight + cellHeight / 2;
+            const radius = Math.min(cellWidth, cellHeight) * 0.35;
+            const isRed = piece === piece.toUpperCase();
+            
+            ctx.fillStyle = isRed ? '#c41e3a' : '#003da5';
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold ' + Math.max(12, Math.floor(radius * 1.2)) + 'px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pieces[piece].symbol, x, y);
+        }
+        
+        // 마우스 클릭 처리
+        canvas.addEventListener('click', (e) => {
+            const { row, col } = getClickPos(e);
+            
+            if (col < 0 || col >= 9 || row < 0 || row >= 10) return;
+            
+            const piece = gameState.board[row][col];
+            
+            // 유효한 이동 선택
+            if (gameState.selectedPos && gameState.validMoves.some(m => m[0] === row && m[1] === col)) {
+                movePiece(gameState.selectedPos[0], gameState.selectedPos[1], row, col);
+                gameState.selectedPos = null;
+                gameState.validMoves = [];
+                drawBoard();
+                updateInfo();
+                return;
+            }
+            
+            // 기물 선택
+            if (piece !== '.' && pieces[piece].player === gameState.turn) {
+                gameState.selectedPos = [row, col];
+                gameState.validMoves = getValidMoves(row, col);
+                drawBoard();
+            }
+        });
+        
+        // 기물 이동
+        function movePiece(fromRow, fromCol, toRow, toCol) {
+            const piece = gameState.board[fromRow][fromCol];
+            const target = gameState.board[toRow][toCol];
+            
+            gameState.board[toRow][toCol] = piece;
+            gameState.board[fromRow][fromCol] = '.';
+            
+            const notation = pieces[piece].name + ': (' + fromCol + ',' + fromRow + ') → (' + toCol + ',' + toRow + ')';
+            if (target !== '.') {
+                gameState.moves.push(notation + ' (획득: ' + pieces[target].name + ')');
+            } else {
+                gameState.moves.push(notation);
+            }
+            
+            gameState.turn = gameState.turn === 'red' ? 'blue' : 'red';
+        }
+        
+        // 정보 업데이트
+        function updateInfo() {
+            const status = document.getElementById('playerStatus');
+            status.textContent = gameState.turn === 'red' ? '🔴 빨간색 차례' : '🔵 파란색 차례';
+            status.className = 'player-status ' + (gameState.turn === 'red' ? 'red-player' : 'blue-player');
+            
+            const gameStatus = document.getElementById('gameStatus');
+            gameStatus.textContent = gameState.moves.length === 0 ? '게임이 시작되었습니다' : '총 ' + gameState.moves.length + '수 진행됨';
+            
+            const movesLog = document.getElementById('movesLog');
+            if (gameState.moves.length > 0) {
+                movesLog.innerHTML = gameState.moves.map((m, i) => {
+                    const isRed = i % 2 === 0;
+                    return '<div class="move-item ' + (isRed ? 'move-red' : 'move-blue') + '">' + (i + 1) + '. ' + m + '</div>';
+                }).join('');
+                movesLog.scrollTop = movesLog.scrollHeight;
+            } else {
+                movesLog.textContent = '기록이 없습니다';
+            }
+        }
+        
+        // 게임 리셋
+        function resetGame() {
+            initBoard();
+            drawBoard();
+            updateInfo();
+        }
+        
+        // 초기화
+        initBoard();
+        drawBoard();
+        updateInfo();
+    </script>
+</body>
+</html>
