@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="나침판">
+    <title>나침판</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #000;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        
+        .compass-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto 2rem;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid #ddd;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        svg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+        
+        .compass-text {
+            font-size: 16px;
+            font-weight: 600;
+            text-anchor: middle;
+        }
+        
+        .compass-text.primary {
+            font-weight: 700;
+            font-size: 18px;
+            fill: #000;
+        }
+        
+        .compass-text.secondary {
+            fill: #999;
+        }
+        
+        .compass-line {
+            stroke: #ccc;
+            stroke-width: 1;
+        }
+        
+        #compassNeedle {
+            position: absolute;
+            width: 4px;
+            height: 100px;
+            background: linear-gradient(to top, #e74c3c 0%, #e74c3c 40%, transparent 40%);
+            top: 40px;
+            left: calc(50% - 2px);
+            transform-origin: center 200px;
+            transition: transform 0.1s ease-out;
+            z-index: 5;
+        }
+        
+        .compass-center {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: #e74c3c;
+            border-radius: 50%;
+            z-index: 10;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .info-box {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 1.5rem;
+        }
+        
+        .info-label {
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 0.5rem;
+        }
+        
+        #degreeDisplay {
+            font-size: 40px;
+            font-weight: 700;
+            color: #000;
+            margin: 0.5rem 0;
+        }
+        
+        #directionDisplay {
+            font-size: 16px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        #statusMessage {
+            font-size: 13px;
+            color: #999;
+            text-align: center;
+            min-height: 20px;
+        }
+        
+        .guide {
+            background: #f0f8ff;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid #3498db;
+            margin-top: 1rem;
+            font-size: 12px;
+            color: #555;
+            text-align: left;
+        }
+        
+        .guide strong {
+            display: block;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #1a1a1a;
+            }
+            
+            h1 {
+                color: #fff;
+            }
+            
+            .subtitle {
+                color: #ccc;
+            }
+            
+            .compass-container {
+                background: #2d2d2d;
+                border-color: #444;
+            }
+            
+            .compass-text.primary {
+                fill: #fff;
+            }
+            
+            .compass-text.secondary {
+                fill: #999;
+            }
+            
+            .compass-line {
+                stroke: #444;
+            }
+            
+            .info-box {
+                background: #2d2d2d;
+                border-color: #444;
+            }
+            
+            #degreeDisplay {
+                color: #fff;
+            }
+            
+            #directionDisplay {
+                color: #ccc;
+            }
+            
+            .guide {
+                background: #1e3a5f;
+                border-left-color: #3498db;
+                color: #aaa;
+            }
+            
+            .guide strong {
+                color: #e0e0e0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>나침판</h1>
+    <p class="subtitle">현재 방향을 가리킵니다</p>
+    
+    <div class="compass-container">
+        <svg viewBox="0 0 280 280">
+            <circle cx="140" cy="140" r="135" fill="none" stroke="currentColor" stroke-width="1" class="compass-line" opacity="0.3"/>
+            
+            <!-- 방위 표시 -->
+            <text x="140" y="25" class="compass-text primary">N</text>
+            <text x="255" y="148" class="compass-text secondary">E</text>
+            <text x="140" y="265" class="compass-text secondary">S</text>
+            <text x="25" y="148" class="compass-text secondary">W</text>
+            
+            <!-- 각도 눈금 -->
+            <line x1="140" y1="10" x2="140" y2="20" class="compass-line"/>
+            <line x1="270" y1="140" x2="260" y2="140" class="compass-line"/>
+            <line x1="140" y1="270" x2="140" y2="260" class="compass-line"/>
+            <line x1="10" y1="140" x2="20" y2="140" class="compass-line"/>
+        </svg>
+        
+        <div id="compassNeedle"></div>
+        <div class="compass-center"></div>
+    </div>
+    
+    <div class="info-box">
+        <div class="info-label">현재 방향</div>
+        <div id="degreeDisplay">--°</div>
+        <div id="directionDisplay">--</div>
+    </div>
+    
+    <div id="statusMessage">기기 방향 센서 초기화 중...</div>
+    
+    <div class="guide">
+        <strong>📍 사용 방법</strong>
+        1. "허용" 버튼을 눌러 기기 방향 접근 승인<br>
+        2. 기기를 천천히 원 모양으로 움직여 센서 보정<br>
+        3. 빨간 바늘이 북쪽을 가리킵니다
+    </div>
+</div>
+
+<script>
+const compassNeedle = document.getElementById('compassNeedle');
+const degreeDisplay = document.getElementById('degreeDisplay');
+const directionDisplay = document.getElementById('directionDisplay');
+const statusMessage = document.getElementById('statusMessage');
+
+// 방위 이름 함수
+function getDirectionName(degrees) {
+    const directions = ['북', '북동', '동', '남동', '남', '남서', '서', '북서'];
+    const index = Math.round((degrees % 360) / 45) % 8;
+    return directions[index];
+}
+
+// 나침판 업데이트
+function updateCompass(alpha, beta, gamma) {
+    let heading = alpha;
+    
+    // 기기 기울기에 따른 보정
+    if (beta > 0) {
+        heading = heading + gamma;
+    } else {
+        heading = heading - gamma;
+    }
+    
+    heading = (heading + 360) % 360;
+    heading = Math.round(heading);
+    
+    // UI 업데이트
+    compassNeedle.style.transform = `rotate(${heading}deg)`;
+    degreeDisplay.textContent = heading + '°';
+    directionDisplay.textContent = getDirectionName(heading);
+}
+
+// DeviceOrientationEvent 지원 확인
+if (typeof DeviceOrientationEvent !== 'undefined') {
+    // iOS 13+ 권한 요청
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        statusMessage.textContent = '허용 버튼을 눌러 기기 방향 접근을 허락해주세요.';
+        
+        DeviceOrientationEvent.requestPermission()
+            .then(permissionState => {
+                if (permissionState === 'granted') {
+                    window.addEventListener('deviceorientation', (event) => {
+                        updateCompass(event.alpha, event.beta, event.gamma);
+                    });
+                    statusMessage.textContent = '';
+                } else {
+                    statusMessage.textContent = '❌ 허용이 거부됨';
+                }
+            })
+            .catch(() => {
+                statusMessage.textContent = '❌ 권한 요청 실패';
+            });
+    } else {
+        // Android는 바로 접근 가능
+        window.addEventListener('deviceorientation', (event) => {
+            updateCompass(event.alpha, event.beta, event.gamma);
+        });
+        statusMessage.textContent = '';
+    }
+} else {
+    statusMessage.textContent = '❌ 기기가 나침판을 지원하지 않습니다.';
+}
+
+// 센서 보정 안내 (3초 후)
+setTimeout(() => {
+    if (degreeDisplay.textContent === '--°') {
+        statusMessage.textContent = '기기를 천천히 원을 그리며 움직여 센서를 보정해주세요. 📱';
+    }
+}, 3000);
+</script>
+
+</body>
+</html>
