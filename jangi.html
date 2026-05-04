@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>블루투스 장기 - 2인용</title>
+    <style>
+        /* 기존 스타일 유지 및 블루투스 버튼 추가 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, sans-serif; display: flex; justify-content: center; background: #f0f2f5; padding: 10px; }
+        .container { background: #fff; border-radius: 10px; padding: 15px; width: 100%; max-width: 500px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .controls { display: flex; gap: 10px; margin-bottom: 15px; }
+        canvas { border: 2px solid #444; background: #e3c193; display: block; margin: 0 auto; cursor: pointer; width: 100%; height: auto; border-radius: 5px; }
+        .status-bar { padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center; font-weight: bold; }
+        .red { background: #ffebee; color: #c62828; }
+        .blue { background: #e3f2fd; color: #1565c0; }
+        .btn-bt { background: #2196f3; color: white; border: none; padding: 10px; border-radius: 5px; flex: 1; font-weight: bold; }
+        .btn-reset { background: #757575; color: white; border: none; padding: 10px; border-radius: 5px; }
+        .log { height: 100px; overflow-y: auto; font-size: 12px; background: #f9f9f9; padding: 5px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 style="text-align: center; margin-bottom: 10px;">블루투스 장기</h2>
+        
+        <div class="controls">
+            <button class="btn-bt" id="btConnect">기기 연결 (Bluetooth)</button>
+            <button class="btn-reset" onclick="resetGame()">초기화</button>
+        </div>
+
+        <div id="playerStatus" class="status-bar red">연결 대기 중...</div>
+        
+        <canvas id="boardCanvas"></canvas>
+
+        <div style="margin-top: 15px;">
+            <p id="roleInfo" style="font-size: 13px; color: #666; margin-bottom: 5px;">내 역할: 연결 필요</p>
+            <div class="log" id="gameLog">상대방과 연결하면 게임이 시작됩니다.</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('boardCanvas');
+        const ctx = canvas.getContext('2d');
+        const logEl = document.getElementById('gameLog');
+        const statusEl = document.getElementById('playerStatus');
+        const roleEl = document.getElementById('roleInfo');
+
+        // 게임 상태 관리
+        let gameState = {
+            turn: 'red',
+            myRole: null, // 'red' (마스터) or 'blue' (슬레이브)
+            selectedPos: null,
+            validMoves: [],
+            board: []
+        };
+
+        // 블루투스 설정
+        let btDevice, btCharacteristic;
+        const SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb'; // 표준 시리얼 서비스
+        const CHAR_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+
+        document.getElementById('btConnect').addEventListener('click', async () => {
+            try {
+                log("기기 탐색 중...");
+                btDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [SERVICE_UUID]
+                });
+                const server = await btDevice.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                btCharacteristic = await service.getCharacteristic(CHAR_UUID);
+                
+                // 데이터 수신 리스너
+                await btCharacteristic.startNotifications();
+                btCharacteristic.addEventListener('characteristicvaluechanged', handleDataReceive);
+                
+                gameState.myRole = 'red'; // 먼저 연결 시도한 쪽이 빨간색
+                roleEl.textContent = "내 역할: 🔴 빨간색 (선제)";
+                log("연결 성공! 당신의 차례입니다.");
+                updateStatus();
+            } catch (err) {
+                log("연결 실패: " + err);
+            }
+        });
+
+        function handleDataReceive(event) {
+            const value = new TextDecoder().decode(event.target.value);
+            const [fR, fC, tR, tC] = value.split(',').map(Number);
+            
+            // 상대방이 보낸 좌표로 기물 이동 실행
+            executeMove(fR, fC, tR, tC, false); 
+            
+            // 역할이 정해지지 않았다면 파란색으로 지정 (수신 받은 쪽)
+            if (!gameState.myRole) {
+                gameState.myRole = 'blue';
+                roleEl.textContent = "내 역할: 🔵 파란색 (후제)";
+            }
+            log(`상대방 이동: (${fC},${fR}) -> (${tC},${tR})`);
+        }
+
+        async function sendMove(fR, fC, tR, tC) {
+            if (btCharacteristic) {
+                const data = new TextEncoder().encode(`${fR},${fC},${tR},${tC}`);
+                await btCharacteristic.writeValue(data);
+            }
+        }
+
+        // --- 장기 로직 기초 ---
+        const pieceSymbols = { 'R':'王','A':'士','E':'象','H':'馬','C':'車','P':'砲','S':'兵','r':'王','a':'士','e':'象','h':'馬','c':'차','p':'포','s':'졸' };
+
+        function initBoard() {
+            gameState.board = [
+                ['c','h','e','a','r','a','e','h','c'],
+                ['.','.','.','.','.','.','.','.','.'],
+                ['.','p','.','.','.','.','.','p','.'],
+                ['s','.','s','.','s','.','s','.','s'],
+                ['.','.','.','.','.','.','.','.','.'],
+                ['.','.','.','.','.','.','.','.','.'],
+                ['S','.','S','.','S','.','S','.','S'],
+                ['.','P','.','.','.','.','.','P','.'],
+                ['.','.','.','.','.','.','.','.','.'],
+                ['C','H','E','A','R','A','E','H','C']
+            ];
+            gameState.turn = 'red';
+            resizeCanvas();
+            draw();
+        }
+
+        function executeMove(fR, fC, tR, tC, isMyAction) {
+            const piece = gameState.board[fR][fC];
+            gameState.board[tR][tC] = piece;
+            gameState.board[fR][fC] = '.';
+            gameState.turn = gameState.turn === 'red' ? 'blue' : 'red';
+            
+            if (isMyAction) sendMove(fR, fC, tR, tC);
+            draw();
+            updateStatus();
+        }
+
+        // --- 캔버스 및 클릭 처리 ---
+        function resizeCanvas() {
+            const size = Math.min(window.innerWidth - 40, 450);
+            canvas.width = size;
+            canvas.height = size * 1.1;
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (gameState.myRole !== gameState.turn) {
+                alert("당신의 차례가 아닙니다!");
+                return;
+            }
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const col = Math.floor(x / (canvas.width / 9));
+            const row = Math.floor(y / (canvas.height / 10));
+
+            const piece = gameState.board[row][col];
+
+            // 이동 선택
+            if (gameState.selectedPos) {
+                const [sR, sC] = gameState.selectedPos;
+                if (sR === row && sC === col) {
+                    gameState.selectedPos = null;
+                } else {
+                    executeMove(sR, sC, row, col, true);
+                    gameState.selectedPos = null;
+                }
+            } 
+            // 기물 선택
+            else if (piece !== '.' && isMyPiece(piece)) {
+                gameState.selectedPos = [row, col];
+            }
+            draw();
+        });
+
+        function isMyPiece(p) {
+            const isRed = p === p.toUpperCase();
+            return (gameState.myRole === 'red' && isRed) || (gameState.myRole === 'blue' && !isRed);
+        }
+
+        function draw() {
+            const cw = canvas.width / 9;
+            const ch = canvas.height / 10;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 격자 및 기물 그리기 (단순화 버전)
+            for(let r=0; r<10; r++) {
+                for(let c=0; c<9; c++) {
+                    ctx.strokeStyle = "#8d6e63";
+                    ctx.strokeRect(c*cw, r*ch, cw, ch);
+                    
+                    const p = gameState.board[r][c];
+                    if (p !== '.') {
+                        const isRed = p === p.toUpperCase();
+                        ctx.fillStyle = isRed ? "#c62828" : "#1565c0";
+                        ctx.beginPath();
+                        ctx.arc(c*cw+cw/2, r*ch+ch/2, cw*0.4, 0, Math.PI*2);
+                        ctx.fill();
+                        ctx.fillStyle = "white";
+                        ctx.font = "bold 16px sans-serif";
+                        ctx.textAlign = "center";
+                        ctx.fillText(pieceSymbols[p], c*cw+cw/2, r*ch+ch/2+6);
+                    }
+                }
+            }
+            if (gameState.selectedPos) {
+                ctx.strokeStyle = "yellow";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(gameState.selectedPos[1]*cw, gameState.selectedPos[0]*ch, cw, ch);
+            }
+        }
+
+        function updateStatus() {
+            statusEl.textContent = gameState.turn === 'red' ? "🔴 빨간색 차례" : "🔵 파란색 차례";
+            statusEl.className = `status-bar ${gameState.turn}`;
+        }
+
+        function log(msg) {
+            const div = document.createElement('div');
+            div.textContent = `> ${msg}`;
+            logEl.prepend(div);
+        }
+
+        function resetGame() {
+            if(confirm("게임을 초기화할까요?")) initBoard();
+        }
+
+        initBoard();
+    </script>
+</body>
+</html>
