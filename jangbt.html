@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>블루투스 장기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        body {
+            background: #000;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .status-bar {
+            background: #1a1a1a;
+            border-bottom: 2px solid #e74c3c;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .status-bar h1 {
+            font-size: 18px;
+            color: #e74c3c;
+            font-weight: 700;
+        }
+        
+        .bt-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            padding: 4px 10px;
+            background: #333;
+            border-radius: 12px;
+            color: #aaa;
+        }
+        
+        .bt-status.connected {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #111;
+        }
+        
+        .game-container {
+            flex: 1;
+            display: flex;
+            padding: 8px;
+            gap: 8px;
+            overflow: hidden;
+        }
+        
+        .board-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #222;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #333;
+        }
+        
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+        
+        .side-panel {
+            width: 100px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+        }
+        
+        .panel-box {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 11px;
+            color: #aaa;
+            flex-shrink: 0;
+        }
+        
+        .panel-box h3 {
+            color: #e74c3c;
+            font-size: 10px;
+            margin-bottom: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .player-display {
+            text-align: center;
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            background: #2a2a2a;
+            border-left: 3px solid #e74c3c;
+        }
+        
+        .player-display.red {
+            color: #e74c3c;
+        }
+        
+        .player-display.blue {
+            color: #3498db;
+        }
+        
+        .turn-text {
+            font-size: 10px;
+            text-align: center;
+            padding: 6px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            margin-top: 4px;
+        }
+        
+        .turn-text.active {
+            color: #27ae60;
+            font-weight: 600;
+        }
+        
+        .selected-display {
+            background: #2a2a2a;
+            padding: 6px;
+            border-radius: 4px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 12px;
+            color: #e74c3c;
+            font-weight: 600;
+        }
+        
+        .log-box {
+            flex: 1;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 6px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 9px;
+            line-height: 1.4;
+        }
+        
+        .log-item {
+            padding: 2px 0;
+            border-bottom: 1px solid #222;
+        }
+        
+        .log-item.red {
+            color: #e74c3c;
+        }
+        
+        .log-item.blue {
+            color: #3498db;
+        }
+        
+        .log-item.system {
+            color: #27ae60;
+        }
+        
+        .control-area {
+            background: #1a1a1a;
+            border-top: 2px solid #e74c3c;
+            padding: 8px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+        
+        .btn {
+            padding: 8px;
+            border: 1px solid #e74c3c;
+            background: #222;
+            color: #e74c3c;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn:active:not(:disabled) {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .direction-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+        
+        .dir-btn {
+            padding: 6px;
+            border: 1px solid #e74c3c;
+            background: #222;
+            color: #e74c3c;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .dir-btn:active {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .direction-group {
+            display: none;
+        }
+        
+        .direction-group.show {
+            display: grid;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #1a1a1a;
+            border: 2px solid #e74c3c;
+            border-radius: 8px;
+            padding: 16px;
+            width: 90%;
+            max-width: 350px;
+            max-height: 70%;
+            overflow-y: auto;
+            color: #aaa;
+        }
+        
+        .modal-content h2 {
+            color: #e74c3c;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        
+        .modal-content p {
+            font-size: 12px;
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        
+        .device-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 12px 0;
+            border: 1px solid #333;
+            border-radius: 4px;
+        }
+        
+        .device-item {
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .device-item:hover {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .device-item:last-child {
+            border-bottom: none;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .modal-buttons .btn {
+            flex: 1;
+        }
+        
+        @media (min-width: 768px) {
+            .side-panel {
+                width: 140px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-bar">
+        <h1>🎮 블루투스 장기</h1>
+        <div class="bt-status" id="btStatus">
+            <span>●</span>
+            <span>연결 대기</span>
+        </div>
+    </div>
+    
+    <div class="main">
+        <div class="game-container">
+            <div class="board-wrapper">
+                <canvas id="gameCanvas"></canvas>
+            </div>
+            
+            <div class="side-panel">
+                <div class="player-display red" id="playerDisplay">🔴 빨강</div>
+                <div class="turn-text" id="turnText">시작 대기</div>
+                
+                <div class="panel-box">
+                    <h3>선택</h3>
+                    <div class="selected-display" id="selectedDisplay">-</div>
+                </div>
+                
+                <div class="panel-box">
+                    <h3>이동</h3>
+                    <div class="log-box" id="moveLog">
+                        <div class="log-item" style="color: #666;">기록 없음</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-area">
+            <div class="button-group">
+                <button class="btn" onclick="openBtModal()">📱 연결</button>
+                <button class="btn" onclick="resetGame()">🔄 리셋</button>
+            </div>
+            
+            <div class="direction-group" id="directionGroup">
+                <button class="dir-btn" onclick="sendMove(0)">▲ 위</button>
+                <button class="dir-btn" onclick="sendMove(1)">► 우</button>
+                <button class="dir-btn" onclick="sendMove(2)">▼ 하</button>
+                <button class="dir-btn" onclick="sendMove(3)">◀ 좌</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 블루투스 연결 모달 -->
+    <div class="modal" id="btModal">
+        <div class="modal-content">
+            <h2>📱 블루투스 연결</h2>
+            <p id="modalStatus">페어링된 장치를 선택하세요</p>
+            <div class="device-list" id="deviceList">
+                <div class="device-item" style="color: #666;">검색 중...</div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn" onclick="scanDevices()">🔍 다시 검색</button>
+                <button class="btn" onclick="closeBtModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        const game = {
+            board: [],
+            turn: 'red',
+            playerColor: null,
+            selectedPos: null,
+            moves: [],
+            connected: false,
+            port: null,
+            reader: null,
+            writer: null,
+            readingData: false
+        };
+        
+        const pieces = {
+            'R': { name: '왕', player: 'red', symbol: '王' },
+            'A': { name: '사', player: 'red', symbol: '士' },
+            'E': { name: '상', player: 'red', symbol: '象' },
+            'H': { name: '마', player: 'red', symbol: '馬' },
+            'C': { name: '차', player: 'red', symbol: '車' },
+            'P': { name: '포', player: 'red', symbol: '砲' },
+            'S': { name: '병', player: 'red', symbol: '兵' },
+            'r': { name: '왕', player: 'blue', symbol: '王' },
+            'a': { name: '사', player: 'blue', symbol: '士' },
+            'e': { name: '상', player: 'blue', symbol: '象' },
+            'h': { name: '마', player: 'blue', symbol: '馬' },
+            'c': { name: '차', player: 'blue', symbol: '車' },
+            'p': { name: '포', player: 'blue', symbol: '砲' },
+            's': { name: '병', player: 'blue', symbol: '兵' }
+        };
+        
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 캔버스 크기 조정
+        function resizeCanvas() {
+            const wrapper = canvas.parentElement;
+            const size = Math.min(wrapper.clientWidth, wrapper.clientHeight);
+            canvas.width = size;
+            canvas.height = size;
+            drawBoard();
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // 게임 초기화
+        function initGame() {
+            game.board = [
+                ['c', 'h', 'e', 'a', 'r', 'a', 'e', 'h', 'c'],
+                ['.', '.', '.', '.', '.', '.', '.', '.', '.'],
+                ['.', 'p', '.', '.', '.', '.', '.', 'p', '.'],
+                ['s', '.', 's', '.', 's', '.', 's', '.', 's'],
+                ['.', '.', '.', '.', '.', '.', '.', '.', '.'],
+                ['.', '.', '.', '.', '.', '.', '.', '.', '.'],
+                ['S', '.', 'S', '.', 'S', '.', 'S', '.', 'S'],
+                ['.', 'P', '.', '.', '.', '.', '.', 'P', '.'],
+                ['.', '.', '.', '.', '.', '.', '.', '.', '.'],
+                ['C', 'H', 'E', 'A', 'R', 'A', 'E', 'H', 'C']
+            ];
+            
+            game.turn = 'red';
+            game.selectedPos = null;
+            game.moves = [];
+            game.playerColor = game.playerColor || 'red';
+            
+            updateUI();
+            drawBoard();
+        }
+        
+        // 보드 그리기
+        function drawBoard() {
+            const cellW = canvas.width / 9;
+            const cellH = canvas.height / 10;
+            
+            ctx.fillStyle = '#d4a574';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            
+            // 격자
+            for (let i = 0; i <= 10; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * cellH);
+                ctx.lineTo(canvas.width, i * cellH);
+                ctx.stroke();
+            }
+            for (let j = 0; j <= 9; j++) {
+                ctx.beginPath();
+                ctx.moveTo(j * cellW, 0);
+                ctx.lineTo(j * cellW, canvas.height);
+                ctx.stroke();
+            }
+            
+            // 대사 표시
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(3 * cellW, 7 * cellH, 3 * cellW, 3 * cellH);
+            ctx.strokeRect(3 * cellW, 0, 3 * cellW, 3 * cellH);
+            
+            // 대각선
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(3 * cellW, 7 * cellH);
+            ctx.lineTo(6 * cellW, 10 * cellH);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(6 * cellW, 7 * cellH);
+            ctx.lineTo(3 * cellW, 10 * cellH);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(3 * cellW, 0);
+            ctx.lineTo(6 * cellW, 3 * cellH);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(6 * cellW, 0);
+            ctx.lineTo(3 * cellW, 3 * cellH);
+            ctx.stroke();
+            
+            // 기물
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const piece = game.board[i][j];
+                    if (piece !== '.') {
+                        drawPiece(i, j, piece, cellW, cellH);
+                    }
+                }
+            }
+            
+            // 선택 표시
+            if (game.selectedPos) {
+                const [r, c] = game.selectedPos;
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                ctx.fillRect(c * cellW, r * cellH, cellW, cellH);
+            }
+        }
+        
+        function drawPiece(row, col, piece, cellW, cellH) {
+            const x = col * cellW + cellW / 2;
+            const y = row * cellH + cellH / 2;
+            const r = Math.min(cellW, cellH) * 0.4;
+            const isRed = piece === piece.toUpperCase();
+            
+            ctx.fillStyle = isRed ? '#c41e3a' : '#003da5';
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${Math.floor(r * 1.3)}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pieces[piece].symbol, x, y);
+        }
+        
+        // 캔버스 클릭
+        canvas.addEventListener('click', (e) => {
+            if (game.turn !== game.playerColor) {
+                return;
+            }
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const cellW = canvas.width / 9;
+            const cellH = canvas.height / 10;
+            const col = Math.floor(x / cellW);
+            const row = Math.floor(y / cellH);
+            
+            if (col >= 0 && col < 9 && row >= 0 && row < 10) {
+                const piece = game.board[row][col];
+                if (piece !== '.' && pieces[piece].player === game.playerColor) {
+                    game.selectedPos = [row, col];
+                    document.getElementById('selectedDisplay').textContent = `[${row},${col}]`;
+                    document.getElementById('directionGroup').classList.add('show');
+                    drawBoard();
+                }
+            }
+        });
+        
+        // 이동 전송
+        function sendMove(direction) {
+            if (!game.selectedPos) return;
+            
+            const [row, col] = game.selectedPos;
+            const message = `${row},${col},${direction}`;
+            
+            // 블루투스로 전송
+            if (game.writer) {
+                const encoder = new TextEncoder();
+                game.writer.write(encoder.encode(message)).catch(err => {
+                    addLog('system', '❌ 전송 오류');
+                });
+            }
+            
+            // 로컬 처리
+            processMove(row, col, direction);
+        }
+        
+        function processMove(row, col, direction) {
+            const dirs = [
+                { dr: -1, dc: 0, name: '▲' },
+                { dr: 0, dc: 1, name: '►' },
+                { dr: 1, dc: 0, name: '▼' },
+                { dr: 0, dc: -1, name: '◀' }
+            ];
+            
+            const dir = dirs[direction];
+            const nr = row + dir.dr;
+            const nc = col + dir.dc;
+            
+            if (nr >= 0 && nr < 10 && nc >= 0 && nc < 9) {
+                const piece = game.board[row][col];
+                if (piece !== '.') {
+                    game.board[nr][nc] = piece;
+                    game.board[row][col] = '.';
+                    
+                    const notation = `${pieces[piece].name} ${dir.name}`;
+                    game.moves.push(notation);
+                    
+                    game.turn = game.turn === 'red' ? 'blue' : 'red';
+                    game.selectedPos = null;
+                    document.getElementById('directionGroup').classList.remove('show');
+                    
+                    updateUI();
+                    drawBoard();
+                }
+            }
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            const playerDisplay = document.getElementById('playerDisplay');
+            playerDisplay.textContent = game.playerColor === 'red' ? '🔴 빨강' : '🔵 파랑';
+            playerDisplay.className = `player-display ${game.playerColor}`;
+            
+            const turnText = document.getElementById('turnText');
+            if (game.turn === game.playerColor) {
+                turnText.textContent = '당신의 차례';
+                turnText.className = 'turn-text active';
+            } else {
+                turnText.textContent = '상대 차례';
+                turnText.className = 'turn-text';
+            }
+            
+            const moveLog = document.getElementById('moveLog');
+            if (game.moves.length > 0) {
+                moveLog.innerHTML = game.moves.map((m, i) => {
+                    const color = i % 2 === 0 ? 'red' : 'blue';
+                    return `<div class="log-item ${color}">${i+1}. ${m}</div>`;
+                }).join('');
+                moveLog.scrollTop = moveLog.scrollHeight;
+            } else {
+                moveLog.innerHTML = '<div class="log-item" style="color: #666;">기록 없음</div>';
+            }
+        }
+        
+        function addLog(type, text) {
+            const log = document.getElementById('moveLog');
+            const item = document.createElement('div');
+            item.className = `log-item ${type}`;
+            item.textContent = text;
+            log.appendChild(item);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        // 블루투스 모달
+        function openBtModal() {
+            document.getElementById('btModal').classList.add('show');
+            scanDevices();
+        }
+        
+        function closeBtModal() {
+            document.getElementById('btModal').classList.remove('show');
+        }
+        
+        async function scanDevices() {
+            try {
+                document.getElementById('modalStatus').textContent = '장치 검색 중...';
+                
+                // Web Bluetooth API 사용
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { name: /HC-0[56]/ },
+                        { name: /블루/ },
+                        { name: /JANGGI/ }
+                    ]
+                });
+                
+                connectDevice(device);
+            } catch (error) {
+                if (error.name !== 'NotFoundError') {
+                    document.getElementById('modalStatus').textContent = `❌ ${error.message}`;
+                }
+            }
+        }
+        
+        async function connectDevice(device) {
+            try {
+                document.getElementById('modalStatus').textContent = '연결 중...';
+                
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+                
+                game.writer = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
+                const reader = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
+                
+                await reader.startNotifications();
+                reader.addEventListener('characteristicvaluechanged', handleMessage);
+                
+                game.connected = true;
+                document.getElementById('btStatus').textContent = '● 연결됨';
+                document.getElementById('btStatus').className = 'bt-status connected';
+                
+                closeBtModal();
+                initGame();
+                addLog('system', '✅ 연결 완료');
+            } catch (error) {
+                document.getElementById('modalStatus').textContent = `❌ ${error.message}`;
+            }
+        }
+        
+        function handleMessage(event) {
+            const value = event.target.value;
+            const decoder = new TextDecoder();
+            const message = decoder.decode(value).trim();
+            
+            const parts = message.split(',');
+            if (parts.length === 3) {
+                const row = parseInt(parts[0]);
+                const col = parseInt(parts[1]);
+                const dir = parseInt(parts[2]);
+                
+                if (!isNaN(row) && !isNaN(col) && !isNaN(dir)) {
+                    processMove(row, col, dir);
+                }
+            }
+        }
+        
+        function resetGame() {
+            if (confirm('게임을 처음부터?')) {
+                initGame();
+                document.getElementById('directionGroup').classList.remove('show');
+            }
+        }
+        
+        // 초기화
+        game.playerColor = 'red';
+        initGame();
+    </script>
+</body>
+</html>
