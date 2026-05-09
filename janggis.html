@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>블루투스 장기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #000;
+        }
+        
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: #1a1a1a;
+            border-bottom: 2px solid #e74c3c;
+            padding: 10px 15px;
+            color: #e74c3c;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        
+        .game-area {
+            flex: 1;
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            overflow: hidden;
+        }
+        
+        .board {
+            flex: 1;
+            background: #222;
+            border-radius: 8px;
+            border: 2px solid #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .info {
+            width: 110px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+        }
+        
+        .box {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 11px;
+            color: #aaa;
+        }
+        
+        .box h3 {
+            color: #e74c3c;
+            font-size: 10px;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        
+        .player {
+            text-align: center;
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            border-left: 3px solid #e74c3c;
+        }
+        
+        .player.red {
+            color: #e74c3c;
+            background: #2a1a1a;
+        }
+        
+        .player.blue {
+            color: #3498db;
+            background: #1a2a3a;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 6px;
+            font-size: 10px;
+            border-radius: 4px;
+            margin-top: 4px;
+        }
+        
+        .status.wait {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .status.ok {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .log {
+            flex: 1;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 6px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 9px;
+            line-height: 1.4;
+        }
+        
+        .log-item {
+            padding: 2px 0;
+            border-bottom: 1px solid #222;
+        }
+        
+        .footer {
+            background: #1a1a1a;
+            border-top: 2px solid #e74c3c;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        
+        button {
+            padding: 8px;
+            background: #222;
+            border: 1px solid #e74c3c;
+            color: #e74c3c;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        button:active {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .dir-group {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        
+        .dir-group.show {
+            display: grid;
+        }
+        
+        .dir-btn {
+            padding: 6px;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">🎮 블루투스 장기</div>
+        
+        <div class="game-area">
+            <div class="board">
+                <canvas id="canvas"></canvas>
+            </div>
+            
+            <div class="info">
+                <div class="player red" id="player">🔴 빨강</div>
+                <div class="status wait" id="status">대기</div>
+                
+                <div class="box">
+                    <h3>선택</h3>
+                    <div id="select" style="text-align: center; color: #e74c3c; font-weight: 600;">-</div>
+                </div>
+                
+                <div class="box">
+                    <h3>이동</h3>
+                    <div class="log" id="log">
+                        <div class="log-item" style="color: #666;">기록 없음</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div class="btn-group">
+                <button onclick="start()">📱 시작</button>
+                <button onclick="reset()">🔄 리셋</button>
+            </div>
+            
+            <div class="dir-group" id="dirs">
+                <button class="dir-btn" onclick="move(0)">▲</button>
+                <button class="dir-btn" onclick="move(1)">►</button>
+                <button class="dir-btn" onclick="move(2)">▼</button>
+                <button class="dir-btn" onclick="move(3)">◄</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 상태
+        const state = {
+            board: [],
+            color: 'red',
+            turn: 'red',
+            select: null,
+            moves: [],
+            connected: false
+        };
+        
+        const pieces = {
+            'R': '王', 'A': '士', 'E': '象', 'H': '馬', 'C': '車', 'P': '砲', 'S': '兵',
+            'r': '王', 'a': '士', 'e': '象', 'h': '馬', 'c': '車', 'p': '砲', 's': '兵'
+        };
+        
+        const names = {
+            'R': '왕', 'A': '사', 'E': '상', 'H': '마', 'C': '차', 'P': '포', 'S': '병',
+            'r': '왕', 'a': '사', 'e': '상', 'h': '마', 'c': '차', 'p': '포', 's': '병'
+        };
+        
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resize() {
+            const w = canvas.parentElement.clientWidth;
+            const h = canvas.parentElement.clientHeight;
+            const s = Math.min(w, h);
+            canvas.width = s;
+            canvas.height = s;
+            draw();
+        }
+        
+        window.addEventListener('resize', resize);
+        resize();
+        
+        function init() {
+            state.board = [
+                ['c','h','e','a','r','a','e','h','c'],
+                ['.','.','.','.','.','.','.','.','.' ],
+                ['.',  'p','.','.','.','.','.',  'p','.' ],
+                ['s','.','s','.','s','.','s','.','s'],
+                ['.','.','.','.','.','.','.','.','.' ],
+                ['.','.','.','.','.','.','.','.','.' ],
+                ['S','.','S','.','S','.','S','.','S'],
+                ['.',  'P','.','.','.','.','.',  'P','.' ],
+                ['.','.','.','.','.','.','.','.','.' ],
+                ['C','H','E','A','R','A','E','H','C']
+            ];
+            state.turn = 'red';
+            state.select = null;
+            state.moves = [];
+            updateUI();
+            draw();
+        }
+        
+        function draw() {
+            const w = canvas.width / 9;
+            const h = canvas.height / 10;
+            
+            ctx.fillStyle = '#d4a574';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i <= 10; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * h);
+                ctx.lineTo(canvas.width, i * h);
+                ctx.stroke();
+            }
+            for (let j = 0; j <= 9; j++) {
+                ctx.beginPath();
+                ctx.moveTo(j * w, 0);
+                ctx.lineTo(j * w, canvas.height);
+                ctx.stroke();
+            }
+            
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(3*w, 7*h, 3*w, 3*h);
+            ctx.strokeRect(3*w, 0, 3*w, 3*h);
+            
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(3*w, 7*h); ctx.lineTo(6*w, 10*h); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(6*w, 7*h); ctx.lineTo(3*w, 10*h); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(3*w, 0); ctx.lineTo(6*w, 3*h); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(6*w, 0); ctx.lineTo(3*w, 3*h); ctx.stroke();
+            
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const p = state.board[i][j];
+                    if (p !== '.') {
+                        const x = j * w + w/2;
+                        const y = i * h + h/2;
+                        const r = Math.min(w, h) * 0.4;
+                        
+                        ctx.fillStyle = p === p.toUpperCase() ? '#c41e3a' : '#003da5';
+                        ctx.beginPath();
+                        ctx.arc(x, y, r, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        
+                        ctx.fillStyle = '#fff';
+                        ctx.font = `bold ${Math.floor(r*1.3)}px serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(pieces[p], x, y);
+                    }
+                }
+            }
+            
+            if (state.select) {
+                const [r, c] = state.select;
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                ctx.fillRect(c * w, r * h, w, h);
+            }
+        }
+        
+        canvas.addEventListener('click', (e) => {
+            if (state.turn !== state.color) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const w = canvas.width / 9;
+            const h = canvas.height / 10;
+            const c = Math.floor(x / w);
+            const r = Math.floor(y / h);
+            
+            if (c < 0 || c >= 9 || r < 0 || r >= 10) return;
+            
+            const p = state.board[r][c];
+            const isRed = p === p.toUpperCase();
+            
+            if (p !== '.' && isRed === (state.color === 'red')) {
+                state.select = [r, c];
+                document.getElementById('select').textContent = `[${r},${c}]`;
+                document.getElementById('dirs').classList.add('show');
+                draw();
+            }
+        });
+        
+        function move(d) {
+            if (!state.select) return;
+            
+            const [r, c] = state.select;
+            const msg = `${r},${c},${d}`;
+            
+            log(msg, state.color);
+            process(r, c, d);
+            
+            state.select = null;
+            document.getElementById('dirs').classList.remove('show');
+        }
+        
+        function process(r, c, d) {
+            const dirs = [
+                {dr: -1, dc: 0, n: '▲'},
+                {dr: 0, dc: 1, n: '►'},
+                {dr: 1, dc: 0, n: '▼'},
+                {dr: 0, dc: -1, n: '◄'}
+            ];
+            
+            const dir = dirs[d];
+            const nr = r + dir.dr;
+            const nc = c + dir.dc;
+            
+            if (nr < 0 || nr >= 10 || nc < 0 || nc >= 9) return;
+            
+            const p = state.board[r][c];
+            state.board[nr][nc] = p;
+            state.board[r][c] = '.';
+            
+            state.moves.push(`${names[p]} ${dir.n}`);
+            state.turn = state.turn === 'red' ? 'blue' : 'red';
+            
+            updateUI();
+            draw();
+        }
+        
+        function updateUI() {
+            const pl = document.getElementById('player');
+            pl.textContent = state.color === 'red' ? '🔴 빨강' : '🔵 파랑';
+            pl.className = `player ${state.color}`;
+            
+            const st = document.getElementById('status');
+            if (state.turn === state.color) {
+                st.textContent = '당신의 차례';
+                st.className = 'status ok';
+            } else {
+                st.textContent = '상대방 차례';
+                st.className = 'status wait';
+            }
+            
+            const lg = document.getElementById('log');
+            if (state.moves.length > 0) {
+                lg.innerHTML = state.moves.map((m, i) => {
+                    const c = i % 2 === 0 ? '#e74c3c' : '#3498db';
+                    return `<div class="log-item" style="color: ${c};">${i+1}. ${m}</div>`;
+                }).join('');
+                lg.scrollTop = lg.scrollHeight;
+            } else {
+                lg.innerHTML = '<div class="log-item" style="color: #666;">기록 없음</div>';
+            }
+        }
+        
+        function log(msg, color) {
+            const lg = document.getElementById('log');
+            const item = document.createElement('div');
+            item.className = 'log-item';
+            item.style.color = color === 'red' ? '#e74c3c' : '#3498db';
+            item.textContent = msg;
+            lg.appendChild(item);
+            lg.scrollTop = lg.scrollHeight;
+        }
+        
+        function start() {
+            alert(`준비 사항:
+            
+1. 두 폰을 블루투스로 페어링
+   (설정 → 블루투스 → 페어링)
+
+2. 게임 시작 후:
+   - 빨간색이 먼저 시작
+   - 말 클릭 후 방향 선택
+   - 이동 정보가 표시됨
+   
+3. 상대 폰과 수동으로 동기화
+   (메시지로 이동 정보 공유)
+   
+예시: 0,0,2
+(0행 0열의 말을 아래로)`);
+            state.color = prompt('당신의 색깔 (red/blue)?', 'red') === 'blue' ? 'blue' : 'red';
+            init();
+        }
+        
+        function reset() {
+            if (confirm('게임을 처음부터?')) {
+                init();
+            }
+        }
+        
+        init();
+    </script>
+</body>
+</html>
