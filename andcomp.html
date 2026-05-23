@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="모바일 나침반">
+    <title>모바일 나침반</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #111111;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+            overflow: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 0.2rem;
+        }
+        
+        .subtitle {
+            font-size: 13px;
+            color: #888888;
+            margin-bottom: 2rem;
+        }
+        
+        .compass-container {
+            position: relative;
+            width: 290px;
+            height: 290px;
+            margin: 0 auto 2rem;
+            border-radius: 50%;
+            background: #1e1e1e;
+            border: 3px solid #333333;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        svg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+        
+        .compass-text {
+            font-size: 16px;
+            font-weight: 600;
+            text-anchor: middle;
+        }
+        
+        .compass-text.primary {
+            font-weight: 900;
+            font-size: 20px;
+            fill: #ff3b30;
+        }
+        
+        .compass-text.secondary {
+            fill: #aaaaaa;
+            font-weight: 700;
+        }
+        
+        .compass-line {
+            stroke: #444444;
+            stroke-width: 1.5;
+        }
+        
+        #compassNeedle {
+            position: absolute;
+            width: 6px;
+            height: 120px;
+            background: linear-gradient(to top, #ff3b30 0%, #ff3b30 50%, #ffffff 50%, #ffffff 100%);
+            top: 25px;
+            left: calc(50% - 3px);
+            transform-origin: center 120px;
+            transition: transform 0.1s ease-out;
+            z-index: 5;
+            border-radius: 3px;
+        }
+        
+        .compass-center {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #ffffff;
+            border: 3px solid #ff3b30;
+            border-radius: 50%;
+            z-index: 10;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .info-box {
+            background: #1e1e1e;
+            padding: 1.2rem;
+            border-radius: 16px;
+            border: 1px solid #222222;
+            margin-bottom: 1.5rem;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .info-label {
+            font-size: 12px;
+            color: #666666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.2rem;
+        }
+        
+        #degreeDisplay {
+            font-size: 46px;
+            font-weight: 800;
+            color: #ffffff;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        #directionDisplay {
+            font-size: 18px;
+            color: #ff3b30;
+            font-weight: 700;
+            margin-top: 0.2rem;
+        }
+        
+        #statusMessage {
+            font-size: 13px;
+            color: #ffcc00;
+            text-align: center;
+            min-height: 20px;
+            padding: 0 10px;
+        }
+        
+        .guide {
+            background: #161616;
+            padding: 1rem;
+            border-radius: 12px;
+            border-left: 4px solid #ff3b30;
+            margin-top: 1.5rem;
+            font-size: 13px;
+            color: #aaaaaa;
+            text-align: left;
+            line-height: 1.6;
+        }
+        
+        .guide strong {
+            display: block;
+            color: #ffffff;
+            margin-bottom: 0.4rem;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>정밀 나침반</h1>
+    <p class="subtitle">안드로이드 및 모바일 최적화 버전</p>
+    
+    <div class="compass-container">
+        <svg viewBox="0 0 280 280">
+            <!-- 외곽 원 눈금 -->
+            <circle cx="140" cy="140" r="130" fill="none" stroke="#333333" stroke-width="1"/>
+            <circle cx="140" cy="140" r="120" fill="none" stroke="#222222" stroke-width="1" stroke-dasharray="2,4"/>
+            
+            <!-- 방위 자막 표시 -->
+            <text x="140" y="32" class="compass-text primary">N</text>
+            <text x="252" y="146" class="compass-text secondary">E</text>
+            <text x="140" y="260" class="compass-text secondary">S</text>
+            <text x="28" y="146" class="compass-text secondary">W</text>
+            
+            <!-- 주 눈금선 -->
+            <line x1="140" y1="10" x2="140" y2="22" class="compass-line" stroke="#ff3b30"/>
+            <line x1="270" y1="140" x2="258" y2="140" class="compass-line"/>
+            <line x1="140" y1="270" x2="140" y2="258" class="compass-line"/>
+            <line x1="10" y1="140" x2="22" y2="140" class="compass-line"/>
+            
+            <!-- 보조 사방위 눈금선 (45도) -->
+            <line x1="48.08" y1="48.08" x2="56.57" y2="56.57" class="compass-line" opacity="0.6"/>
+            <line x1="231.92" y1="48.08" x2="223.43" y2="56.57" class="compass-line" opacity="0.6"/>
+            <line x1="48.08" y1="231.92" x2="56.57" y2="223.43" class="compass-line" opacity="0.6"/>
+            <line x1="231.92" y1="231.92" x2="223.43" y2="223.43" class="compass-line" opacity="0.6"/>
+        </svg>
+        
+        <!-- 회전할 바늘 (중심점 기준 정렬 보정) -->
+        <div id="compassNeedle"></div>
+        <div class="compass-center"></div>
+    </div>
+    
+    <div class="info-box">
+        <div class="info-label">HEADING</div>
+        <div id="degreeDisplay">--°</div>
+        <div id="directionDisplay">방위 측정 중</div>
+    </div>
+    
+    <div id="statusMessage">센서 연결 확인 중...</div>
+    
+    <div class="guide">
+        <strong>💡 안드로이드 정밀 측정 안내</strong>
+        1. 반드시 스마트폰 기기를 수평으로 편평하게 들고 사용하세요.<br>
+        2. 수치가 고정되어 있거나 맞지 않으면 스마트폰을 공중에서 <strong>정방향/역방향으로 크게 8자(∞) 모양</strong>으로 2~3회 움직여 센서를 보정해 주세요.<br>
+        3. 자성이 있는 스마트폰 케이스나 자석 거치대 근처에서는 오차가 발생할 수 있습니다.
+    </div>
+</div>
+
+<script>
+const compassNeedle = document.getElementById('compassNeedle');
+const degreeDisplay = document.getElementById('degreeDisplay');
+const directionDisplay = document.getElementById('directionDisplay');
+const statusMessage = document.getElementById('statusMessage');
+
+// 세분화된 16방위 구조 정의
+function getDirectionName(degrees) {
+    const directions = [
+        '북 (N)', '북북동 (NNE)', '북동 (NE)', '동북동 (ENE)',
+        '동 (E)', '동남동 (ESE)', '남동 (SE)', '남남동 (SSE)',
+        '남 (S)', '남남서 (SSW)', '남서 (SW)', '서남서 (WSW)',
+        '서 (W)', '서북서 (WNW)', '북서 (NW)', '북북서 (NNW)'
+    ];
+    const index = Math.round((degrees % 360) / 22.5) % 16;
+    return directions[index];
+}
+
+// 나침반 화면 업데이트 처리 (기기 회전 역방향 보정을 기본 반영)
+function updateCompassUI(heading) {
+    heading = (heading + 360) % 360;
+    const roundedHeading = Math.round(heading);
+    
+    // 바늘이 실제 정북(0도)을 유지하도록 기기 회전각의 반대(-roundedHeading)로 회전 구조 처리
+    compassNeedle.style.transform = `rotate(${-roundedHeading}deg)`;
+    degreeDisplay.textContent = roundedHeading + '°';
+    directionDisplay.textContent = getDirectionName(roundedHeading);
+}
+
+// 방위각 센서 데이터 매핑 핸들러
+function handleOrientation(event) {
+    let heading = null;
+
+    // 1. 안드로이드 정밀 기기 절대 방위각 (absolute가 true이거나 deviceorientationabsolute 이벤트인 경우)
+    if (event.absolute && event.alpha !== null) {
+        // 웹 표준에 의거하여 안드로이드 기준 북쪽 보정 연산 적용 (360 - alpha)
+        heading = (360 - event.alpha) % 360;
+        statusMessage.textContent = "✓ 안드로이드 절대 정밀 센서 작동 중";
+        statusMessage.style.color = "#4cd964";
+    } 
+    // 2. iOS 전용 진북 데이터 예외 처리 백업
+    else if (event.webkitCompassHeading !== undefined) {
+        heading = event.webkitCompassHeading;
+        statusMessage.textContent = "✓ 실시간 방향 데이터 수신 중";
+        statusMessage.style.color = "#4cd964";
+    }
+    // 3. 일반 상대값 백업 연산
+    else if (event.alpha !== null) {
+        heading = (360 - event.alpha) % 360;
+        statusMessage.textContent = "⚠️ 상대 방위 센서로 동작 중 (8자 보정 필요)";
+        statusMessage.style.color = "#ffcc00";
+    }
+
+    if (heading !== null) {
+        updateCompassUI(heading);
+    }
+}
+
+// 센서 구동 초기화 및 이벤트 바인딩
+if (window.DeviceOrientationEvent) {
+    // 안드로이드 하드웨어 절대 정밀 센서 표준 이벤트(deviceorientationabsolute) 우선 감지 체계
+    if ('ondeviceorientationabsolute' in window) {
+        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+    } else {
+        // 일반 디바이스 오리엔테이션 바인딩
+        window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+    
+    // iOS 웹뷰 호환성 대응 터치 승인 프로세스 예외 추가
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        statusMessage.textContent = "💡 화면을 터치하여 센서 활성화를 완료해 주세요.";
+        
+        const initIOSPermission = () => {
+            DeviceOrientationEvent.requestPermission()
+                .then(state => {
+                    if (state === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation, true);
+                        statusMessage.textContent = "✓ 센서 활성화 완료";
+                        statusMessage.style.color = "#4cd964";
+                    } else {
+                        statusMessage.textContent = "❌ 센서 접근 권한이 거부되었습니다.";
+                        statusMessage.style.color = "#ff3b30";
+                    }
+                })
+                .catch(() => {
+                    statusMessage.textContent = "❌ 권한 요청 중 오류가 발생했습니다.";
+                    statusMessage.style.color = "#ff3b30";
+                });
+            window.removeEventListener('click', initIOSPermission);
+        };
+        window.addEventListener('click', initIOSPermission);
+    }
+} else {
+    statusMessage.textContent = "❌ 하드웨어 방향 센서가 지원되지 않는 기기입니다.";
+    statusMessage.style.color = "#ff3b30";
+}
+
+// 첫 로드 후 무반응 대응 가이드 트리거
+setTimeout(() => {
+    if (degreeDisplay.textContent === '--°') {
+        statusMessage.textContent = "📱 스마트폰을 평평하게 들고 크게 8자(∞)를 그리며 움직여주세요.";
+    }
+}, 2500);
+</script>
+
+</body>
+</html>
