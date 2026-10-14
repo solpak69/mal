@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>웹 만보기</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            width: 320px;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+        .counter-circle {
+            width: 180px;
+            height: 180px;
+            background: #fff;
+            color: #0984e3;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 30px auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        #stepCount {
+            font-size: 3rem;
+            font-weight: bold;
+        }
+        .label {
+            font-size: 0.9rem;
+            color: #636e72;
+            margin-top: 5px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        #startBtn {
+            background-color: #00b894;
+            color: white;
+        }
+        #startBtn:hover {
+            background-color: #55efc4;
+        }
+        #resetBtn {
+            background-color: #d63031;
+            color: white;
+        }
+        #resetBtn:hover {
+            background-color: #ff7675;
+        }
+        .info {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #dfe6e9;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>👟 스마트 만보기</h1>
+        
+        <div class="counter-circle">
+            <span id="stepCount">0</span>
+            <span class="label">걸음</span>
+        </div>
+
+        <div class="btn-group">
+            <button id="startBtn">센서 시작</button>
+            <button id="resetBtn">초기화</button>
+        </div>
+
+        <div class="info" id="statusMsg">버튼을 눌러 시작하세요</div>
+    </div>
+
+    <script>
+        let steps = 0;
+        let lastStepTime = 0; // 마지막으로 걸음이 카운트된 시간 저장 변수
+        const stepCountEl = document.getElementById('stepCount');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const statusMsg = document.getElementById('statusMsg');
+
+        let isTracking = false;
+        let lastAcceleration = 0;
+        const threshold = 12; // 걸음 감지 임계값 (가속도 변화량)
+        const cooldownTime = 500; // 500밀리초(0.5초) 쿨타임
+
+        // 초기화 버튼
+        resetBtn.addEventListener('click', () => {
+            steps = 0;
+            lastStepTime = 0;
+            stepCountEl.textContent = steps;
+        });
+
+        // 센서 시작/중지 토글 버튼
+        startBtn.addEventListener('click', () => {
+            if (!isTracking) {
+                // 모바일 기기 권한 요청 (iOS 13+ 등)
+                if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                    DeviceMotionEvent.requestPermission()
+                        .then(response => {
+                            if (response === 'granted') {
+                                startMotionSensor();
+                            } else {
+                                alert("센서 권한이 거부되었습니다.");
+                            }
+                        })
+                        .catch(console.error);
+                } else if ('DeviceMotionEvent' in window) {
+                    startMotionSensor();
+                } else {
+                    // 센서가 지원되지 않는 환경 (PC 등) 안내 및 수동 테스트 모드 전환
+                    statusMsg.textContent = "PC 환경: 화면을 클릭해 테스트하세요.";
+                    window.addEventListener('click', simulateStep);
+                }
+            } else {
+                stopMotionSensor();
+            }
+        });
+
+        function startMotionSensor() {
+            isTracking = true;
+            startBtn.textContent = "센서 중지";
+            startBtn.style.backgroundColor = "#e17055";
+            statusMsg.textContent = "걸음을 측정 중입니다 (500ms 쿨타임 적용)...";
+
+            window.addEventListener('devicemotion', handleMotion);
+        }
+
+        function stopMotionSensor() {
+            isTracking = false;
+            startBtn.textContent = "센서 시작";
+            startBtn.style.backgroundColor = "#00b894";
+            statusMsg.textContent = "측정이 중지되었습니다.";
+
+            window.removeEventListener('devicemotion', handleMotion);
+            window.removeEventListener('click', simulateStep);
+        }
+
+        // 가속도 센서로 걸음 감지 로직
+        function handleMotion(event) {
+            const acc = event.accelerationIncludingGravity;
+            if (!acc) return;
+
+            // 전체 가속도 크기 계산
+            const currentAcceleration = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+            const delta = Math.abs(currentAcceleration - lastAcceleration);
+
+            const currentTime = Date.now();
+
+            // 변화량이 임계값을 넘고, 마지막 걸음 시간으로부터 500ms(0.5초)가 지났을 때만 인정
+            if (delta > threshold && (currentTime - lastStepTime) > cooldownTime) {
+                steps++;
+                stepCountEl.textContent = steps;
+                lastStepTime = currentTime; // 현재 시간을 마지막 걸음 시간으로 갱신
+            }
+            lastAcceleration = currentAcceleration;
+        }
+
+        // PC 등 센서 없는 환경에서 클릭할 때 (쿨타임 적용)
+        function simulateStep() {
+            const currentTime = Date.now();
+            if ((currentTime - lastStepTime) > cooldownTime) {
+                steps++;
+                stepCountEl.textContent = steps;
+                lastStepTime = currentTime;
+            }
+        }
+    </script>
+
+</body>
+</html>
