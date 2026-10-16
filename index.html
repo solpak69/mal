@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>날짜별 웹 만보기</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            width: 340px;
+        }
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+        .date-display {
+            font-size: 0.9rem;
+            color: #dfe6e9;
+            margin-bottom: 20px;
+        }
+        .counter-circle {
+            width: 160px;
+            height: 160px;
+            background: #fff;
+            color: #0984e3;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        #stepCount {
+            font-size: 2.8rem;
+            font-weight: bold;
+        }
+        .label {
+            font-size: 0.85rem;
+            color: #636e72;
+            margin-top: 5px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        button {
+            padding: 10px 18px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        #startBtn {
+            background-color: #00b894;
+            color: white;
+        }
+        #startBtn:hover {
+            background-color: #55efc4;
+        }
+        #resetBtn {
+            background-color: #d63031;
+            color: white;
+        }
+        #resetBtn:hover {
+            background-color: #ff7675;
+        }
+        .history-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            text-align: left;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .history-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 3px;
+        }
+        .info {
+            margin-top: 10px;
+            font-size: 0.75rem;
+            color: #dfe6e9;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>👟 날짜별 스마트 만보기</h1>
+        <div class="date-display" id="dateDisplay">오늘 날짜 로딩 중...</div>
+        
+        <div class="counter-circle">
+            <span id="stepCount">0</span>
+            <span class="label">오늘 걸음</span>
+        </div>
+
+        <div class="btn-group">
+            <button id="startBtn">센서 시작</button>
+            <button id="resetBtn">오늘 초기화</button>
+        </div>
+
+        <!-- 💡 날짜별 기록을 보여주는 영역 추가 -->
+        <div class="history-box">
+            <div class="history-title">📅 이전 기록 보기</div>
+            <div id="historyList">저장된 기록이 없습니다.</div>
+        </div>
+
+        <div class="info" id="statusMsg">버튼을 눌러 시작하세요</div>
+    </div>
+
+    <script>
+        const stepCountEl = document.getElementById('stepCount');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const statusMsg = document.getElementById('statusMsg');
+        const dateDisplay = document.getElementById('dateDisplay');
+        const historyList = document.getElementById('historyList');
+
+        // 오늘 날짜를 'YYYY-MM-DD' 형식으로 가져오는 함수
+        function getTodayDateStr() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        const todayKey = getTodayDateStr();
+        dateDisplay.textContent = `오늘: ${todayKey}`;
+
+        // 💡 전체 기록 객체 불러오기 (없으면 빈 객체)
+        let stepHistory = JSON.parse(localStorage.getItem('stepHistory')) || {};
+
+        // 오늘 날짜 데이터가 없으면 0으로 초기화
+        if (stepHistory[todayKey] === undefined) {
+            stepHistory[todayKey] = 0;
+        }
+
+        let steps = stepHistory[todayKey];
+        stepCountEl.textContent = steps;
+
+        // 화면 하단에 이전 기록 목록 렌더링 함수
+        function updateHistoryUI() {
+            const keys = Object.keys(stepHistory).sort().reverse(); // 최신 날짜가 위로 오게 정렬
+            let html = '';
+            keys.forEach(date => {
+                html += `<div>${date}: <b>${stepHistory[date]}보</b></div>`;
+            });
+            historyList.innerHTML = html || '저장된 기록이 없습니다.';
+        }
+        updateHistoryUI();
+
+        let lastStepTime = 0; 
+        let isTracking = false;
+        let lastAcceleration = 0;
+        
+        const threshold = 9;     
+        const cooldownTime = 400; 
+
+        // 오늘 기록 초기화 버튼
+        resetBtn.addEventListener('click', () => {
+            steps = 0;
+            lastStepTime = 0;
+            stepCountEl.textContent = steps;
+            stepHistory[todayKey] = 0;
+            localStorage.setItem('stepHistory', JSON.stringify(stepHistory));
+            updateHistoryUI();
+        });
+
+        startBtn.addEventListener('click', () => {
+            if (!isTracking) {
+                if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                    DeviceMotionEvent.requestPermission()
+                        .then(response => {
+                            if (response === 'granted') {
+                                startMotionSensor();
+                            } else {
+                                alert("센서 권한이 거부되었습니다.");
+                            }
+                        })
+                        .catch(console.error);
+                } else if ('DeviceMotionEvent' in window) {
+                    startMotionSensor();
+                } else {
+                    statusMsg.textContent = "PC 환경: 화면을 클릭해 테스트하세요.";
+                    window.addEventListener('click', simulateStep);
+                }
+            } else {
+                stopMotionSensor();
+            }
+        });
+
+        function startMotionSensor() {
+            isTracking = true;
+            startBtn.textContent = "센서 중지";
+            startBtn.style.backgroundColor = "#e17055";
+            statusMsg.textContent = "걸음 측정 중 (날짜별 자동 저장)...";
+
+            window.addEventListener('devicemotion', handleMotion);
+        }
+
+        function stopMotionSensor() {
+            isTracking = false;
+            startBtn.textContent = "센서 시작";
+            startBtn.style.backgroundColor = "#00b894";
+            statusMsg.textContent = "측정이 중지되었습니다.";
+
+            window.removeEventListener('devicemotion', handleMotion);
+            window.removeEventListener('click', simulateStep);
+        }
+
+        function handleMotion(event) {
+            const acc = event.accelerationIncludingGravity;
+            if (!acc) return;
+
+            const currentAcceleration = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+            const delta = Math.abs(currentAcceleration - lastAcceleration);
+
+            const currentTime = Date.now();
+
+            if (delta > threshold && (currentTime - lastStepTime) > cooldownTime) {
+                steps++;
+                stepCountEl.textContent = steps;
+                lastStepTime = currentTime;
+                
+                // 💡 오늘 날짜 키에 걸음 수 업데이트 후 전체 객체 저장
+                stepHistory[todayKey] = steps;
+                localStorage.setItem('stepHistory', JSON.stringify(stepHistory));
+                updateHistoryUI();
+            }
+            lastAcceleration = currentAcceleration;
+        }
+
+        function simulateStep() {
+            const currentTime = Date.now();
+            if ((currentTime - lastStepTime) > cooldownTime) {
+                steps++;
+                stepCountEl.textContent = steps;
+                lastStepTime = currentTime;
+                stepHistory[todayKey] = steps;
+                localStorage.setItem('stepHistory', JSON.stringify(stepHistory));
+                updateHistoryUI();
+            }
+        }
+    </script>
+
+</body>
+</html>
