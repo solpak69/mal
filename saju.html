@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>정밀 자미두수 & 주역 6효 & 대운·월운 사주 풀이</title>
+  <style>
+    :root {
+      --bg-color: #0f0c1b;
+      --card-bg: #1a162b;
+      --accent-gold: #ffd700;
+      --accent-purple: #9d4edd;
+      --text-light: #e0e0e0;
+      --border-color: #3a3252;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-light);
+      font-family: 'Malgun Gothic', sans-serif;
+      padding: 20px;
+    }
+
+    .container { max-width: 1000px; margin: 0 auto; }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px 0;
+      border-bottom: 2px solid var(--accent-purple);
+    }
+    header h1 { color: var(--accent-gold); font-size: 2.2rem; margin-bottom: 10px; }
+
+    .input-card {
+      background: var(--card-bg);
+      padding: 25px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { margin-bottom: 6px; color: var(--accent-gold); font-weight: bold; }
+    .form-group input, .form-group select {
+      padding: 10px; background: #251f3d; border: 1px solid var(--border-color);
+      color: #fff; border-radius: 6px; font-size: 1rem;
+    }
+
+    .submit-btn {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, var(--accent-purple), #5a189a);
+      color: #fff; border: none; border-radius: 8px;
+      font-size: 1.2rem; font-weight: bold; cursor: pointer;
+      transition: 0.3s;
+    }
+    .submit-btn:hover {
+      background: linear-gradient(135deg, #7b2cbf, #3c096c);
+      box-shadow: 0 0 12px var(--accent-purple);
+    }
+
+    #result-area { display: none; }
+
+    .section-title {
+      color: var(--accent-gold);
+      border-left: 4px solid var(--accent-purple);
+      padding-left: 10px; margin: 35px 0 15px 0; font-size: 1.5rem;
+    }
+
+    /* 자미두수 12궁 그리드 */
+    .ziwei-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 8px; margin-bottom: 30px;
+    }
+    .ziwei-cell {
+      background: var(--card-bg); border: 1px solid var(--border-color);
+      border-radius: 8px; padding: 10px; min-height: 110px; position: relative;
+    }
+    .ziwei-cell.center-cell {
+      grid-column: span 2; grid-row: span 2; background: #151022;
+      display: flex; flex-direction: column; justify-content: center;
+      align-items: center; text-align: center; border: 2px solid var(--accent-purple);
+    }
+    .palace-name { position: absolute; bottom: 6px; right: 8px; font-weight: bold; color: var(--accent-gold); }
+    .branch-name { position: absolute; bottom: 6px; left: 8px; color: #888; font-size: 0.8rem; }
+    .stars-main { color: #ff4d4d; font-weight: bold; }
+
+    /* 주역 6효 디스플레이 */
+    .iching-container {
+      background: var(--card-bg); padding: 20px; border-radius: 12px;
+      border: 1px solid var(--border-color); margin-bottom: 30px;
+    }
+    .hex-lines-list { display: flex; flex-direction: column-reverse; gap: 10px; margin-top: 15px; }
+    .hex-line-item {
+      display: flex; align-items: center; gap: 15px; background: #221c38;
+      padding: 10px; border-radius: 6px; border-left: 4px solid transparent;
+    }
+    .hex-line-item.is-moving { border-left-color: var(--accent-gold); background: #2d244a; }
+    .line-graphic { width: 100px; height: 14px; flex-shrink: 0; }
+    .line-yang { height: 100%; background: var(--accent-gold); border-radius: 2px; }
+    .line-yin { height: 100%; display: flex; justify-content: space-between; }
+    .line-yin::before, .line-yin::after { content: ''; width: 45%; height: 100%; background: #777; border-radius: 2px; }
+    .line-info { flex-grow: 1; font-size: 0.95rem; }
+    .line-num { font-weight: bold; color: var(--accent-gold); margin-right: 8px; }
+    .moving-tag { background: var(--accent-purple); color: #fff; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+
+    /* 대운 타임라인 */
+    .daeun-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px; margin-bottom: 30px;
+    }
+    .daeun-card {
+      background: var(--card-bg); border: 1px solid var(--border-color);
+      padding: 15px; border-radius: 8px; text-align: center;
+    }
+    .daeun-age { color: var(--accent-gold); font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; }
+
+    /* 월별 운세 그리드 */
+    .monthly-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px; margin-bottom: 30px;
+    }
+    .month-card {
+      background: #181328; border: 1px solid var(--border-color);
+      padding: 10px; border-radius: 6px; text-align: center;
+    }
+    .month-title { color: var(--accent-purple); font-weight: bold; margin-bottom: 4px; }
+
+    .report-card {
+      background: var(--card-bg); padding: 20px; border-radius: 12px;
+      border: 1px solid var(--border-color); margin-bottom: 15px; line-height: 1.7;
+    }
+    .report-card h3 { color: var(--accent-gold); margin-bottom: 10px; }
+
+    @media (max-width: 600px) {
+      .ziwei-grid { grid-template-columns: repeat(2, 1fr); }
+      .ziwei-cell.center-cell { grid-column: span 2; grid-row: span 1; }
+      .hex-line-item { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>☯ 종합 자미두수 & 주역 6효 & 대운 사주 풀이</h1>
+    <p>명반 12궁, 주역 64괘 6효 전체, 10년 대운, 12개월 월운 통합 분석</p>
+  </header>
+
+  <div class="input-card">
+    <form id="sajuForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>이름</label>
+          <input type="text" id="username" value="홍길동" required>
+        </div>
+        <div class="form-group">
+          <label>성별</label>
+          <select id="gender">
+            <option value="남">남성</option>
+            <option value="여">여성</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>생년월일</label>
+          <input type="date" id="birthdate" value="1992-06-20" required>
+        </div>
+        <div class="form-group">
+          <label>출생 시간</label>
+          <select id="birthtime">
+            <option value="0">자시 (23:00 ~ 01:00)</option>
+            <option value="1">축시 (01:00 ~ 03:00)</option>
+            <option value="2">인시 (03:00 ~ 05:00)</option>
+            <option value="3">묘시 (05:00 ~ 07:00)</option>
+            <option value="4">진시 (07:00 ~ 09:00)</option>
+            <option value="5" selected>사시 (09:00 ~ 11:00)</option>
+            <option value="6">오시 (11:00 ~ 13:00)</option>
+            <option value="7">미시 (13:00 ~ 15:00)</option>
+            <option value="8">신시 (15:00 ~ 17:00)</option>
+            <option value="9">유시 (17:00 ~ 19:00)</option>
+            <option value="10">술시 (19:00 ~ 21:00)</option>
+            <option value="11">해시 (21:00 ~ 23:00)</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="submit-btn">🔮 종합 사주 & 대운·월운 풀이 보기</button>
+    </form>
+  </div>
+
+  <div id="result-area">
+    <!-- 자미두수 명반 -->
+    <h2 class="section-title">✨ 자미두수 12궁 명반</h2>
+    <div class="ziwei-grid" id="ziweiBoard"></div>
+
+    <!-- 주역 64괘 및 1효~6효 전체 -->
+    <h2 class="section-title">☯ 주역 64괘 & 1효~6효 상세 분석</h2>
+    <div class="iching-container">
+      <h3 id="ichingTitle" style="color: var(--accent-gold); font-size: 1.3rem;"></h3>
+      <p id="ichingSummary" style="color: #aaa; margin-top: 5px;"></p>
+      <div class="hex-lines-list" id="hexLinesList"></div>
+    </div>
+
+    <!-- 대운 흐름 -->
+    <h2 class="section-title">⏳ 10년 단위 대운(大運) 흐름</h2>
+    <div class="daeun-grid" id="daeunBoard"></div>
+
+    <!-- 월별 운세 -->
+    <h2 class="section-title">📅 12개월 월별 운세 흐름</h2>
+    <div class="monthly-grid" id="monthlyBoard"></div>
+
+    <!-- 종합 리포트 -->
+    <h2 class="section-title">📜 종합 운세 총평 및 조언</h2>
+    <div class="report-card">
+      <h3>🌟 타고난 성품과 명궁(命宮)</h3>
+      <p id="mainStarReport"></p>
+    </div>
+    <div class="report-card">
+      <h3>💰 재물 및 사업 운세</h3>
+      <p id="wealthReport"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+const BRANCHES = ["자(子)", "축(丑)", "인(寅)", "묘(卯)", "진(辰)", "사(巳)", "오(午)", "미(未)", "신(申)", "유(酉)", "술(戌)", "해(亥)"];
+const PALACES = ["명궁(命宮)", "형제궁", "부처궁", "자녀궁", "재백궁", "질악궁", "천이궁", "노복궁", "관록궁", "전택궁", "복덕궁", "부모궁"];
+
+const STAR_DB = [
+  { name: "자미(紫微)", desc: "리더십과 품격을 갖춘 제왕의 기운입니다." },
+  { name: "천기(天機)", desc: "지혜롭고 기획력이 뛰어난 아이디어의 별입니다." },
+  { name: "태양(太陽)", desc: "밝은 에너지로 주변을 이끄는 공명정대한 기운입니다." },
+  { name: "무곡(武曲)", desc: "실리적이고 결단력이 강한 재물의 별입니다." },
+  { name: "천동(天同)", desc: "온화하며 사람들과의 화합을 중시하는 복덕의 기운입니다." },
+  { name: "염정(廉貞)", desc: "신념이 강하고 독창성이 뛰어난 기운입니다." },
+  { name: "천부(天府)", desc: "안정감이 있고 사람들을 품어주는 포용의 별입니다." },
+  { name: "태음(太陰)", desc: "섬세하고 직관력이 뛰어난 자산 축적의 별입니다." },
+  { name: "탐랑(貪狼)", desc: "사교적이고 다양한 분야에 재능을 가진 별입니다." },
+  { name: "거문(巨門)", desc: "분석력과 설득력이 뛰어난 비판과 전문성의 기운입니다." },
+  { name: "천상(天相)", desc: "예의 바르고 중재 능력이 탁월한 보좌의 별입니다." },
+  { name: "천량(天梁)", desc: "어른스럽고 인복이 두터운 중재와 후덕의 기운입니다." },
+  { name: "칠살(七殺)", desc: "독자적인 길을 개척하는 강한 모험심의 별입니다." },
+  { name: "파군(破軍)", desc: "기존의 틀을 깨고 새로운 것을 창조하는 혁신의 기운입니다." }
+];
+
+const TRIGRAMS = [
+  { name: "천(天)", symbol: "건(乾)", lines: [1, 1, 1] },
+  { name: "택(澤)", symbol: "태(兌)", lines: [1, 1, 0] },
+  { name: "화(火)", symbol: "리(離)", lines: [1, 0, 1] },
+  { name: "뢰(雷)", symbol: "진(震)", lines: [1, 0, 0] },
+  { name: "풍(風)", symbol: "손(巽)", lines: [0, 1, 1] },
+  { name: "수(水)", symbol: "감(坎)", lines: [0, 1, 0] },
+  { name: "산(山)", symbol: "간(艮)", lines: [0, 0, 1] },
+  { name: "지(地)", symbol: "곤(坤)", lines: [0, 0, 0] }
+];
+
+const LINE_POSITION_DESCS = [
+  "초효(初爻 - 기초/시작): 준비와 도모의 단계. 기반을 굳건히 하라.",
+  "이효(二爻 - 발전/협력): 도약의 단계. 귀인을 만나 조력을 얻는다.",
+  "삼효(三爻 - 과도기/주의): 신중함이 필요한 시기. 리스크 관리가 핵심.",
+  "사효(四爻 - 도약/중책): 능력을 발휘하여 핵심적 성과를 만드는 기회.",
+  "오효(五爻 - 절정/리더): 괘의 중심. 성취가 높고 명예가 따르는 자리.",
+  "상효(上爻 - 완성/경계): 일의 마무리와 전환점. 과유불급을 유의하라."
+];
+
+const DAEUN_THEMES = [
+  "학업과 기초 발판을 다지는 시기",
+  "새로운 도전과 사회적 기반 구축기",
+  "왕성한 활동 및 재물 축적의 전성기",
+  "조직 내 주도권 확보 및 사업 확장기",
+  "내실을 기하고 안정을 도모하는 성숙기",
+  "후학 양성 및 지혜를 나누는 명예기"
+];
+
+const MONTH_KEYWORDS = [
+  "새로운 구상", "귀인의 조력", "신중한 거래", "재물 상승", "활발한 이동", "내실 강화",
+  "문서 운 상승", "협력 관계", "도약의 기회", "결실의 달", "계획 재정비", "안정적 마무리"
+];
+
+document.getElementById('sajuForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const name = document.getElementById('username').value;
+  const birthdate = new Date(document.getElementById('birthdate').value);
+  const birthtime = parseInt(document.getElementById('birthtime').value);
+
+  const year = birthdate.getFullYear();
+  const month = birthdate.getMonth() + 1;
+  const day = birthdate.getDate();
+
+  let mingIndex = (month - birthtime + 12) % 12;
+  let mainStarIndex = (year + month + day + mingIndex) % STAR_DB.length;
+
+  generateZiweiBoard(name, year, month, day, mingIndex, mainStarIndex);
+
+  let upperIdx = (year + month + day) % 8;
+  let lowerIdx = (year + month + day + birthtime) % 8;
+  let moveLineNum = ((year + month + day + birthtime) % 6) + 1;
+
+  generate6LinesIching(upperIdx, lowerIdx, moveLineNum);
+  generateDaeun(year, month, day);
+  generateMonthly(year, month);
+
+  document.getElementById('mainStarReport').innerHTML = `
+    <strong>${name}</strong>님의 명궁 주성은 <strong>${STAR_DB[mainStarIndex].name}</strong>입니다.<br>
+    ${STAR_DB[mainStarIndex].desc}
+  `;
+
+  document.getElementById('wealthReport').innerHTML = `
+    생년월일 수치와 자미두수 재백궁 흐름을 종합할 때, 지속적인 자산 관리와 시기별 흐름 연동이 핵심입니다.
+    주역 제 ${moveLineNum}효의 기운 변화 시점을 주의 깊게 관찰하세요.
+  `;
+
+  document.getElementById('result-area').style.display = 'block';
+  document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
+});
+
+function generateZiweiBoard(name, year, month, day, mingIdx, mainStarIdx) {
+  const board = document.getElementById('ziweiBoard');
+  board.innerHTML = '';
+
+  let palaceMap = {};
+  for(let i = 0; i < 12; i++) {
+    palaceMap[(mingIdx + i) % 12] = PALACES[i];
+  }
+
+  const gridPositions = [
+    { row: 4, col: 1, branch: 0 }, { row: 4, col: 2, branch: 1 }, { row: 4, col: 3, branch: 2 }, { row: 4, col: 4, branch: 3 },
+    { row: 3, col: 4, branch: 4 }, { row: 2, col: 4, branch: 5 }, { row: 1, col: 4, branch: 6 }, { row: 1, col: 3, branch: 7 },
+    { row: 1, col: 2, branch: 8 }, { row: 1, col: 1, branch: 9 }, { row: 2, col: 1, branch: 10 }, { row: 3, col: 1, branch: 11 }
+  ];
+
+  const centerCell = document.createElement('div');
+  centerCell.className = 'ziwei-cell center-cell';
+  centerCell.innerHTML = `
+    <h3 style="color:var(--accent-gold);">${name} 님의 명반</h3>
+    <p style="margin-top:5px; font-size:0.85rem; color:#aaa;">${year}.${month}.${day}</p>
+    <p style="font-size:0.85rem; color:var(--accent-purple); margin-top:5px;">[ 주성: ${STAR_DB[mainStarIdx].name} ]</p>
+  `;
+
+  gridPositions.forEach((pos) => {
+    const cell = document.createElement('div');
+    cell.className = 'ziwei-cell';
+    cell.style.gridRow = pos.row; cell.style.gridColumn = pos.col;
+
+    let starIdx = (mainStarIdx + pos.branch) % STAR_DB.length;
+    cell.innerHTML = `
+      <div class="stars-main">${STAR_DB[starIdx].name}</div>
+      <div class="palace-name">${palaceMap[pos.branch]}</div>
+      <div class="branch-name">${BRANCHES[pos.branch]}</div>
+    `;
+    board.appendChild(cell);
+  });
+
+  board.appendChild(centerCell);
+}
+
+function generate6LinesIching(upperIdx, lowerIdx, moveLineNum) {
+  const upper = TRIGRAMS[upperIdx];
+  const lower = TRIGRAMS[lowerIdx];
+  const lines = [...lower.lines, ...upper.lines];
+
+  document.getElementById('ichingTitle').innerText = `주역 卦 : [ ${upper.name}(${upper.symbol}) / ${lower.name}(${lower.symbol}) ]`;
+  document.getElementById('ichingSummary').innerText = `전체 6효 중 현재 변동과 조언의 중심은 제 ${moveLineNum}효(動爻)입니다.`;
+
+  const listContainer = document.getElementById('hexLinesList');
+  listContainer.innerHTML = '';
+
+  lines.forEach((val, index) => {
+    const lineNum = index + 1;
+    const isMoving = (lineNum === moveLineNum);
+
+    const item = document.createElement('div');
+    item.className = `hex-line-item ${isMoving ? 'is-moving' : ''}`;
+
+    const graphic = document.createElement('div');
+    graphic.className = 'line-graphic';
+    graphic.innerHTML = val === 1 ? '<div class="line-yang"></div>' : '<div class="line-yin"></div>';
+
+    const info = document.createElement('div');
+    info.className = 'line-info';
+    let lineTypeStr = val === 1 ? "양효(⚊)" : "음효(⚋)";
+    let movingTagStr = isMoving ? `<span class="moving-tag">★ 핵심 동효(動爻)</span>` : '';
+
+    info.innerHTML = `
+      <div>
+        <span class="line-num">${lineNum}효</span> <strong>[${lineTypeStr}]</strong> ${movingTagStr}
+      </div>
+      <div style="color:#ccc; font-size:0.85rem; margin-top:4px;">
+        ${LINE_POSITION_DESCS[index]}
+        ${isMoving ? '<br><span style="color:var(--accent-gold);">➜ 핵심 변화점: 현재 시점의 결정적 행동 방향을 시사합니다.</span>' : ''}
+      </div>
+    `;
+
+    item.appendChild(graphic);
+    item.appendChild(info);
+    listContainer.appendChild(item);
+  });
+}
+
+function generateDaeun(year, month, day) {
+  const daeunBoard = document.getElementById('daeunBoard');
+  daeunBoard.innerHTML = '';
+
+  let startAge = (year + month + day) % 10 + 1;
+
+  for(let i = 0; i < 5; i++) {
+    let ageRange = `${startAge + (i * 10)}세 ~ ${startAge + (i * 10) + 9}세`;
+    let theme = DAEUN_THEMES[(month + i) % DAEUN_THEMES.length];
+
+    const card = document.createElement('div');
+    card.className = 'daeun-card';
+    card.innerHTML = `
+      <div class="daeun-age">${ageRange}</div>
+      <div style="font-size:0.9rem; color:#ccc;">${theme}</div>
+    `;
+    daeunBoard.appendChild(card);
+  });
+}
+
+function generateMonthly(year, month) {
+  const monthlyBoard = document.getElementById('monthlyBoard');
+  monthlyBoard.innerHTML = '';
+
+  for(let m = 1; m <= 12; m++) {
+    let kw = MONTH_KEYWORDS[(year + month + m) % MONTH_KEYWORDS.length];
+    const card = document.createElement('div');
+    card.className = 'month-card';
+    card.innerHTML = `
+      <div class="month-title">${m}월 운세</div>
+      <div style="font-size:0.85rem; color:#ddd;">${kw}</div>
+    `;
+    monthlyBoard.appendChild(card);
+  });
+}
+</script>
+
+</body>
+</html>
