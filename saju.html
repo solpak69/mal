@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>사주 기본 풀이 (년·일·시주)</title>
+  <style>
+    :root {
+      --bg: #0f0c1b;
+      --card: #1a162b;
+      --line: #3a3252;
+      --gold: #ffd700;
+      --purple: #9d4edd;
+      --text: #e0e0e0;
+      --muted: #a09bb5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+      line-height: 1.6;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    h1 {
+      text-align: center;
+      color: var(--gold);
+      font-size: 1.8rem;
+      margin: 10px 0 6px;
+    }
+    .sub {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      color: var(--gold);
+      font-weight: bold;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      background: #251f3d;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--purple), #5a189a);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    .error {
+      color: #ff7b7b;
+      margin-top: 12px;
+      text-align: center;
+      min-height: 1.4em;
+    }
+    .hidden { display: none; }
+    h2 {
+      color: var(--gold);
+      border-left: 4px solid var(--purple);
+      padding-left: 10px;
+      font-size: 1.3rem;
+      margin: 28px 0 14px;
+    }
+    .pillars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .pillar {
+      background: #221c38;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 8px;
+      text-align: center;
+    }
+    .pillar .label { color: var(--muted); font-size: 0.85rem; }
+    .pillar .ganji {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #fff;
+      margin: 6px 0;
+    }
+    .pillar .hanja { color: var(--gold); font-size: 0.9rem; }
+    .pillar .elem { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
+    .note {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 12px;
+    }
+    .elements {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      text-align: center;
+    }
+    .elem-box {
+      background: #181328;
+      border-radius: 8px;
+      padding: 10px 4px;
+      border: 1px solid var(--line);
+    }
+    .elem-box .name { font-weight: bold; color: var(--gold); }
+    .elem-box .count { font-size: 1.2rem; }
+    .reading p { margin: 8px 0; }
+    .disclaimer {
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: center;
+      margin-top: 30px;
+    }
+    @media (max-width: 500px) {
+      .pillars { grid-template-columns: 1fr; }
+      .elements { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>☯ 사주 기본 풀이</h1>
+  <p class="sub">년주 · 일주 · 시주를 계산하고 일간(日干)별 성향을 풀이합니다.</p>
+
+  <div class="card">
+    <form id="sajuForm">
+      <div class="form-row">
+        <div>
+          <label for="birth">생년월일 (양력)</label>
+          <input type="date" id="birth" required value="1992-06-20">
+        </div>
+        <div>
+          <label for="hour">출생 시간</label>
+          <select id="hour">
+            <option value="">모름</option>
+            <option value="0">자시 (23:00~01:00)</option>
+            <option value="1">축시 (01:00~03:00)</option>
+            <option value="2">인시 (03:00~05:00)</option>
+            <option value="3">묘시 (05:00~07:00)</option>
+            <option value="4">진시 (07:00~09:00)</option>
+            <option value="5">사시 (09:00~11:00)</option>
+            <option value="6">오시 (11:00~13:00)</option>
+            <option value="7">미시 (13:00~15:00)</option>
+            <option value="8">신시 (15:00~17:00)</option>
+            <option value="9">유시 (17:00~19:00)</option>
+            <option value="10">술시 (19:00~21:00)</option>
+            <option value="11">해시 (21:00~23:00)</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit">풀이 보기</button>
+      <div id="error" class="error"></div>
+    </form>
+  </div>
+
+  <div id="result" class="hidden">
+    <h2>사주 기둥</h2>
+    <div class="pillars" id="pillars"></div>
+    <p class="note">※ 년주는 입춘(약 2월 4일)을 기준으로 바꾸는 방식으로 계산했습니다. 월주는 이 페이지에서 계산하지 않습니다.</p>
+
+    <h2>오행 분포 (년·일·시 천간·지지)</h2>
+    <div class="elements" id="elements"></div>
+
+    <h2>일간 풀이</h2>
+    <div class="card reading" id="reading"></div>
+  </div>
+
+  <p class="disclaimer">이 풀이는 재미와 참고용입니다. 중요한 결정은 전문가와 상의하세요.</p>
+</div>
+
+<script>
+  var STEMS = ['갑', '을', '병', '정', '무', '기', '경', '신', '임', '계'];
+  var STEM_HANJA = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+  var STEM_ELEM = ['목', '목', '화', '화', '토', '토', '금', '금', '수', '수'];
+
+  var BRANCHES = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해'];
+  var BRANCH_HANJA = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+  var BRANCH_ELEM = ['수', '토', '목', '목', '토', '화', '화', '토', '금', '금', '토', '수'];
+
+  var ELEMENTS = ['목', '화', '토', '금', '수'];
+
+  var DAY_MASTER_READING = {
+    '갑': '곧고 진취적인 성향으로, 목표를 향해 앞으로 나아가는 힘이 있습니다. 융통성이 부족할 때는 고집으로 보일 수 있어요.',
+    '을': '부드럽고 유연하며 주변과 잘 어울립니다. 겉보기보다 끈기가 있고, 환경에 맞춰 살아남는 능력이 뛰어납니다.',
+    '병': '밝고 열정적이며 사람들의 시선을 끄는 힘이 있습니다. 감정 표현이 솔직해서 주변 분위기를 살리는 편입니다.',
+    '정': '섬세하고 따뜻한 성향입니다. 한 가지에 깊이 몰입하는 능력이 있고, 가까운 사람을 세심하게 챙깁니다.',
+    '무': '듬직하고 신뢰감을 주는 성향입니다. 큰 틀에서 안정적으로 일을 이끌어 가는 힘이 있습니다.',
+    '기': '배려심이 깊고 실속을 챙기는 편입니다. 꼼꼼하게 주변을 살피고 조율하는 역할을 잘 맡습니다.',
+    '경': '결단력이 강하고 원칙을 중시합니다. 한 번 정하면 밀고 나가는 추진력이 있습니다.',
+    '신': '예리하고 세련된 감각이 있습니다. 완벽을 추구하는 만큼 자기 기준이 높은 편입니다.',
+    '임': '지혜롭고 포용력이 큽니다. 생각의 범위가 넓고 변화에 빠르게 적응하는 편입니다.',
+    '계': '섬세하고 직관이 뛰어납니다. 조용하지만 속이 깊고, 상황의 흐름을 잘 읽습니다.'
+  };
+
+  // 60갑자 간지 문자열
+  function ganjiOf(index) {
+    var s = index % 10;
+    var b = index % 12;
+    return {
+      stem: s,
+      branch: b,
+      text: STEMS[s] + BRANCHES[b],
+      hanja: STEM_HANJA[s] + BRANCH_HANJA[b]
+    };
+  }
+
+  // 년주: 1984년이 갑자년. 입춘 전(2월 3일 이전)이면 전년으로 계산
+  function yearPillar(y, m, d) {
+    var adjYear = y;
+    if (m < 2 || (m === 2 && d < 4)) adjYear = y - 1;
+    var idx = ((adjYear - 4) % 60 + 60) % 60;
+    return ganjiOf(idx);
+  }
+
+  // 일주: 율리우스일수(JDN) 기반 계산. 2000-01-01은 무오일로 검증됨
+  function dayPillar(y, m, d) {
+    var a = Math.floor((14 - m) / 12);
+    var y2 = y + 4800 - a;
+    var m2 = m + 12 * a - 3;
+    var jdn = d + Math.floor((153 * m2 + 2) / 5) + 365 * y2
+            + Math.floor(y2 / 4) - Math.floor(y2 / 100)
+            + Math.floor(y2 / 400) - 32045;
+    var idx = ((jdn + 49) % 60 + 60) % 60;
+    return ganjiOf(idx);
+  }
+
+  // 시주: 일간에 따라 자시(子時) 천간의 시작이 정해짐 (갑기일→갑자시 등)
+  function hourPillar(dayStem, hourBranch) {
+    var startStem = (dayStem % 5) * 2;
+    var stem = (startStem + hourBranch) % 10;
+    return ganjiOf(stem + hourBranch * 0); // 아래에서 직접 구성
+  }
+
+  function buildHourPillar(dayStem, hourBranch) {
+    var startStem = (dayStem % 5) * 2;
+    var stem = (startStem + hourBranch) % 10;
+    return {
+      stem: stem,
+      branch: hourBranch,
+      text: STEMS[stem] + BRANCHES[hourBranch],
+      hanja: STEM_HANJA[stem] + BRANCH_HANJA[hourBranch]
+    };
+  }
+
+  function pillarHtml(label, p) {
+    return '<div class="pillar">' +
+      '<div class="label">' + label + '</div>' +
+      '<div class="ganji">' + p.text + '</div>' +
+      '<div class="hanja">' + p.hanja + '</div>' +
+      '<div class="elem">' + STEM_ELEM[p.stem] + ' / ' + BRANCH_ELEM[p.branch] + '</div>' +
+      '</div>';
+  }
+
+  function countElements(pillars) {
+    var counts = { '목': 0, '화': 0, '토': 0, '금': 0, '수': 0 };
+    pillars.forEach(function (p) {
+      counts[STEM_ELEM[p.stem]]++;
+      counts[BRANCH_ELEM[p.branch]]++;
+    });
+    return counts;
+  }
+
+  function render(y, m, d, hourVal) {
+    var yp = yearPillar(y, m, d);
+    var dp = dayPillar(y, m, d);
+    var pillars = [yp, dp];
+    var hourP = null;
+
+    if (hourVal !== '') {
+      hourP = buildHourPillar(dp.stem, parseInt(hourVal, 10));
+      pillars.push(hourP);
+    }
+
+    var html = pillarHtml('년주', yp) + pillarHtml('일주', dp);
+    if (hourP) {
+      html += pillarHtml('시주', hourP);
+    } else {
+      html += '<div class="pillar"><div class="label">시주</div>' +
+              '<div class="ganji">-</div><div class="elem">출생 시간 미입력</div></div>';
+    }
+    document.getElementById('pillars').innerHTML = html;
+
+    var counts = countElements(pillars);
+    var elHtml = ELEMENTS.map(function (e) {
+      return '<div class="elem-box"><div class="name">' + e + '</div>' +
+             '<div class="count">' + counts[e] + '</div></div>';
+    }).join('');
+    document.getElementById('elements').innerHTML = elHtml;
+
+    var dayStemName = STEMS[dp.stem];
+    document.getElementById('reading').innerHTML =
+      '<p><strong>일간: ' + dayStemName + '(' + STEM_HANJA[dp.stem] + ', ' + STEM_ELEM[dp.stem] + ')</strong></p>' +
+      '<p>' + DAY_MASTER_READING[dayStemName] + '</p>' +
+      '<p class="note">가장 많은 오행이 본인의 성향을 드러내는 기준이 되며, 부족한 오행은 생활에서 보완하면 좋다는 것이 일반적인 해석입니다.</p>';
+
+    document.getElementById('result').classList.remove('hidden');
+    document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  document.getElementById('sajuForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var errorEl = document.getElementById('error');
+    errorEl.textContent = '';
+
+    try {
+      var value = document.getElementById('birth').value;
+      if (!value) {
+        errorEl.textContent = '생년월일을 입력해 주세요.';
+        return;
+      }
+      var parts = value.split('-');
+      var y = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      var d = parseInt(parts[2], 10);
+      var hourVal = document.getElementById('hour').value;
+
+      render(y, m, d, hourVal);
+    } catch (err) {
+      errorEl.textContent = '계산 중 오류가 발생했습니다. 다시 시도해 주세요.';
+      console.error(err);
+    }
+  });
+</script>
+</body>
+</html>
