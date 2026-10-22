@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>사주 · 주역 · 자미두수 풀이 (재미용)</title>
+  <style>
+    :root {
+      --bg: #0f0c1b;
+      --card: #1a162b;
+      --line: #3a3252;
+      --gold: #ffd700;
+      --purple: #9d4edd;
+      --text: #e0e0e0;
+      --muted: #a09bb5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+      line-height: 1.6;
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    h1 { text-align: center; color: var(--gold); font-size: 1.8rem; margin: 10px 0 6px; }
+    .sub { text-align: center; color: var(--muted); font-size: 0.9rem; margin-bottom: 14px; }
+    .notice {
+      background: #2a2140;
+      border: 1px dashed var(--purple);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      color: #d6c7f0;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    label { display: block; color: var(--gold); font-weight: bold; margin-bottom: 6px; font-size: 0.95rem; }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      background: #251f3d;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--purple), #5a189a);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    .error { color: #ff7b7b; margin-top: 12px; text-align: center; min-height: 1.4em; }
+    .hidden { display: none; }
+
+    h2 {
+      color: var(--gold);
+      border-left: 4px solid var(--purple);
+      padding-left: 10px;
+      font-size: 1.3rem;
+      margin: 28px 0 14px;
+    }
+    .pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .pillar {
+      background: #221c38;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 6px;
+      text-align: center;
+    }
+    .pillar .label { color: var(--muted); font-size: 0.85rem; }
+    .pillar .ganji { font-size: 1.7rem; font-weight: bold; color: #fff; margin: 4px 0; }
+    .pillar .hanja { color: var(--gold); font-size: 0.9rem; }
+    .pillar .elem { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
+
+    .elements { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; text-align: center; }
+    .elem-box { background: #181328; border-radius: 8px; padding: 10px 4px; border: 1px solid var(--line); }
+    .elem-box .name { font-weight: bold; color: var(--gold); }
+    .elem-box .count { font-size: 1.2rem; }
+
+    .note { color: var(--muted); font-size: 0.85rem; margin-top: 10px; }
+
+    /* 주역 */
+    .hex-title { color: var(--gold); font-size: 1.2rem; font-weight: bold; margin-bottom: 4px; }
+    .hex-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 12px; }
+    .hex-line {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #221c38;
+      border-left: 4px solid transparent;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .hex-line.moving { border-left-color: var(--gold); background: #2d244a; }
+    .line-graphic { width: 110px; height: 14px; flex-shrink: 0; }
+    .yang { height: 100%; background: var(--gold); border-radius: 2px; }
+    .yin { height: 100%; display: flex; justify-content: space-between; }
+    .yin span { width: 45%; height: 100%; background: #777; border-radius: 2px; }
+    .line-text { font-size: 0.92rem; }
+    .line-num { color: var(--gold); font-weight: bold; margin-right: 6px; }
+    .tag {
+      background: var(--purple);
+      color: #fff;
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+
+    /* 자미두수 */
+    .ziwei-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, auto);
+      gap: 8px;
+    }
+    .ziwei-cell {
+      background: #181328;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      min-height: 100px;
+      position: relative;
+      font-size: 0.9rem;
+    }
+    .ziwei-cell .star { color: #ff6b6b; font-weight: bold; }
+    .ziwei-cell .palace { position: absolute; bottom: 6px; right: 8px; color: var(--gold); font-weight: bold; font-size: 0.8rem; }
+    .ziwei-cell .branch { position: absolute; bottom: 6px; left: 8px; color: #888; font-size: 0.75rem; }
+    .ziwei-center {
+      grid-row: 2 / span 2;
+      grid-column: 2 / span 2;
+      background: #151022;
+      border: 2px solid var(--purple);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    /* 운 */
+    .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .mini-card {
+      background: #181328;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .mini-card .title { color: var(--gold); font-weight: bold; }
+    .mini-card .ganji { color: #fff; font-size: 1.1rem; margin: 4px 0; }
+    .mini-card .kw { color: var(--muted); font-size: 0.85rem; }
+
+    .reading p { margin: 8px 0; }
+    .disclaimer { color: var(--muted); font-size: 0.8rem; text-align: center; margin-top: 30px; }
+
+    @media (max-width: 600px) {
+      .pillars { grid-template-columns: repeat(2, 1fr); }
+      .elements { grid-template-columns: repeat(3, 1fr); }
+      .ziwei-grid { gap: 5px; }
+      .ziwei-cell { min-height: 80px; padding: 6px; font-size: 0.8rem; }
+      .hex-line { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>☯ 사주 · 주역 · 자미두수 풀이</h1>
+  <p class="sub">사주 4기둥은 간지 계산 규칙을 따르고, 나머지는 재미용 연출입니다.</p>
+  <div class="notice">
+    ※ 사주 4기둥은 생년월일과 시간으로 계산하며, 절기는 날짜를 근사해 쓰므로 입춘·절기 당일 전후에 태어난 분은 달라질 수 있습니다.
+    주역 괘 선택, 자미두수 명반, 대운·월운 시작 나이는 재미를 위한 연출이며, 정통 명리·역학의 결과가 아닙니다.
+  </div>
+
+  <div class="card">
+    <form id="sajuForm">
+      <div class="form-row">
+        <div>
+          <label for="name">이름</label>
+          <input type="text" id="name" value="홍길동">
+        </div>
+        <div>
+          <label for="birth">생년월일 (양력)</label>
+          <input type="date" id="birth" required value="1992-06-20">
+        </div>
+        <div>
+          <label for="hour">출생 시간</label>
+          <select id="hour">
+            <option value="">모름</option>
+            <option value="0">자시 (23:00~01:00)</option>
+            <option value="1">축시 (01:00~03:00)</option>
+            <option value="2">인시 (03:00~05:00)</option>
+            <option value="3">묘시 (05:00~07:00)</option>
+            <option value="4">진시 (07:00~09:00)</option>
+            <option value="5" selected>사시 (09:00~11:00)</option>
+            <option value="6">오시 (11:00~13:00)</option>
+            <option value="7">미시 (13:00~15:00)</option>
+            <option value="8">신시 (15:00~17:00)</option>
+            <option value="9">유시 (17:00~19:00)</option>
+            <option value="10">술시 (19:00~21:00)</option>
+            <option value="11">해시 (21:00~23:00)</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit">풀이 보기</button>
+      <div id="error" class="error"></div>
+    </form>
+  </div>
+
+  <div id="result" class="hidden">
+    <h2>사주 4기둥</h2>
+    <div class="pillars" id="pillars"></div>
+
+    <h2>오행 분포</h2>
+    <div class="elements" id="elements"></div>
+
+    <h2>일간 풀이</h2>
+    <div class="card reading" id="reading"></div>
+
+    <h2>주역 64괘와 6효 (재미용 연출)</h2>
+    <div class="card">
+      <div class="hex-title" id="hexTitle"></div>
+      <div class="hex-sub" id="hexSub"></div>
+      <div id="hexLines"></div>
+    </div>
+
+    <h2>자미두수 12궁 명반 (재미용 연출)</h2>
+    <div class="ziwei-grid" id="ziwei"></div>
+
+    <h2>10년 단위 대운 (시작 나이 가정)</h2>
+    <div class="grid-cards" id="daeun"></div>
+
+    <h2>12개월 월운 (대략 양력 기준)</h2>
+    <div class="grid-cards" id="monthly"></div>
+
+    <h2>종합 총평</h2>
+    <div class="card reading" id="summary"></div>
+  </div>
+
+  <p class="disclaimer">이 풀이는 재미와 참고용입니다. 중요한 결정은 전문가와 상의하세요.</p>
+</div>
+
+<script>
+  // 기본 데이터
+  var STEMS = ['갑','을','병','정','무','기','경','신','임','계'];
+  var STEM_HANJA = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  var STEM_ELEM = ['목','목','화','화','토','토','금','금','수','수'];
+  var BRANCHES = ['자','축','인','묘','진','사','오','미','신','유','술','해'];
+  var BRANCH_HANJA = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  var BRANCH_ELEM = ['수','토','목','목','토','화','화','토','금','금','토','수'];
+  var ELEMS = ['목','화','토','금','수'];
+
+  var DAY_READING = {
+    '갑': '곧고 진취적인 성향으로 목표를 향해 앞으로 나아가는 힘이 있습니다. 융통성이 부족할 때는 고집으로 보일 수 있어요.',
+    '을': '부드럽고 유연하며 주변과 잘 어울립니다. 겉보기보다 끈기가 있고 환경에 맞춰 살아남는 능력이 뛰어납니다.',
+    '병': '밝고 열정적이며 사람들의 시선을 끄는 힘이 있습니다. 감정 표현이 솔직해서 주변 분위기를 살리는 편입니다.',
+    '정': '섬세하고 따뜻한 성향입니다. 한 가지에 깊이 몰입하는 능력이 있고 가까운 사람을 세심하게 챙깁니다.',
+    '무': '듬직하고 신뢰감을 주는 성향입니다. 큰 틀에서 안정적으로 일을 이끌어 가는 힘이 있습니다.',
+    '기': '배려심이 깊고 실속을 챙기는 편입니다. 꼼꼼하게 주변을 살피고 조율하는 역할을 잘 맡습니다.',
+    '경': '결단력이 강하고 원칙을 중시합니다. 한 번 정하면 밀고 나가는 추진력이 있습니다.',
+    '신': '예리하고 세련된 감각이 있습니다. 완벽을 추구하는 만큼 자기 기준이 높은 편입니다.',
+    '임': '지혜롭고 포용력이 큽니다. 생각의 범위가 넓고 변화에 빠르게 적응하는 편입니다.',
+    '계': '섬세하고 직관이 뛰어납니다. 조용하지만 속이 깊고 상황의 흐름을 잘 읽습니다.'
+  };
+
+  var ELEM_KEYWORD = {
+    '목': '성장과 시작',
+    '화': '열정과 드러남',
+    '토': '안정과 축적',
+    '금': '결단과 정리',
+    '수': '지혜와 유연함'
+  };
+
+  var PALACES = ['명궁','형제궁','부처궁','자녀궁','재백궁','질액궁','천이궁','노복궁','관록궁','전택궁','복덕궁','부모궁'];
+  var MAIN_STARS = ['자미','천기','태양','무곡','천동','염정','천부','태음','탐랑','거문','천상','천량','칠살','파군'];
+
+  var LINE_DESCS = [
+    '초효(기초·시작): 준비와 도모의 단계입니다. 기반을 다지세요.',
+    '이효(발전·협력): 도약의 단계입니다. 귀인의 도움을 얻기 쉽습니다.',
+    '삼효(과도기·주의): 신중함이 필요한 시기입니다. 리스크 관리가 핵심입니다.',
+    '사효(도약·중책): 능력을 발휘해 성과를 만들 기회입니다.',
+    '오효(절정·리더): 괘의 중심입니다. 성취와 명예가 따르는 자리입니다.',
+    '상효(완성·경계): 일의 마무리와 전환점입니다. 과유불급을 유의하세요.'
+  ];
+
+  // 팔괘 (인덱스 0~7, 문왕 괘 순서). lines는 아래에서 위로(초효→상효)
+  var TRIGRAMS = [
+    { name: '건', hanja: '乾', lines: [1,1,1] },
+    { name: '태', hanja: '兌', lines: [1,1,0] },
+    { name: '리', hanja: '離', lines: [1,0,1] },
+    { name: '진', hanja: '震', lines: [1,0,0] },
+    { name: '손', hanja: '巽', lines: [0,1,1] },
+    { name: '감', hanja: '坎', lines: [0,1,0] },
+    { name: '간', hanja: '艮', lines: [0,0,1] },
+    { name: '곤', hanja: '坤', lines: [0,0,0] }
+  ];
+
+  // 64괘 이름 (문왕 괘서 순서, 1~64번)
+  var HEX_NAMES = ['',
+    '乾','坤','屯','蒙','需','訟','師','比','小畜','履','泰','否','同人','大有','謙','豫',
+    '隨','蠱','臨','觀','噬嗑','賁','剝','復','無妄','大畜','頤','大過','坎','離','咸','恆',
+    '遯','大壯','晉','明夷','家人','睽','蹇','解','損','益','夬','姤','萃','升','困','井',
+    '革','鼎','震','艮','漸','歸妹','豐','旅','巽','兌','渙','節','中孚','小過','既濟','未濟'
+  ];
+
+  // KW[상괘][하괘] = 괘 번호 (상괘·하괘 모두 TRIGRAMS 순서)
+  var KW = [
+    [1, 43, 14, 34, 9, 5, 26, 11],
+    [10, 58, 38, 54, 61, 60, 41, 19],
+    [13, 49, 30, 55, 37, 63, 22, 36],
+    [25, 17, 21, 51, 42, 3, 27, 24],
+    [44, 28, 50, 32, 57, 48, 18, 46],
+    [6, 47, 64, 40, 59, 29, 4, 7],
+    [33, 31, 56, 62, 53, 39, 52, 15],
+    [12, 45, 35, 16, 20, 8, 23, 2]
+  ];
+
+  // 간지 유틸
+  function pillarSB(stem, branch) {
+    return {
+      stem: stem,
+      branch: branch,
+      text: STEMS[stem] + BRANCHES[branch],
+      hanja: STEM_HANJA[stem] + BRANCH_HANJA[branch]
+    };
+  }
+
+  // 년주: 1984년이 갑자년. 입춘(약 2월 4일) 이전이면 전년으로 계산
+  function yearPillar(y, m, d) {
+    var adj = (m < 2 || (m === 2 && d < 4)) ? y - 1 : y;
+    var idx = ((adj - 4) % 60 + 60) % 60;
+    return pillarSB(idx % 10, idx % 12);
+  }
+
+  // 월주: 절기 시작일(근사) 기준 월지, 월간은 년간에 따라 정함 (寅월 시작 천간)
+  var TERMS = [
+    [1, 6, 1], [2, 4, 2], [3, 6, 3], [4, 5, 4], [5, 6, 5], [6, 6, 6],
+    [7, 7, 7], [8, 7, 8], [9, 8, 9], [10, 8, 10], [11, 7, 11], [12, 7, 0]
+  ];
+
+  function monthBranch(m, d) {
+    var b = 0; // 1월 6일 이전은 자월(子月)
+    for (var i = 0; i < TERMS.length; i++) {
+      var t = TERMS[i];
+      if (m > t[0] || (m === t[0] && d >= t[1])) b = t[2];
+    }
+    return b;
+  }
+
+  function monthStemFrom(yearStem, branch) {
+    var start = ((yearStem % 5) * 2 + 2) % 10; // 寅월 천간
+    var offset = (branch - 2 + 12) % 12;
+    return (start + offset) % 10;
+  }
+
+  function monthPillar(yearStem, m, d) {
+    var b = monthBranch(m, d);
+    return pillarSB(monthStemFrom(yearStem, b), b);
+  }
+
+  // 일주: 율리우스일수 기반 (2000-01-01 = 戊午일 검증)
+  function dayPillar(y, m, d) {
+    var a = Math.floor((14 - m) / 12);
+    var y2 = y + 4800 - a;
+    var m2 = m + 12 * a - 3;
+    var jdn = d + Math.floor((153 * m2 + 2) / 5) + 365 * y2
+            + Math.floor(y2 / 4) - Math.floor(y2 / 100)
+            + Math.floor(y2 / 400) - 32045;
+    var idx = ((jdn + 49) % 60 + 60) % 60;
+    return pillarSB(idx % 10, idx % 12);
+  }
+
+  // 시주: 일간에 따라 자시의 천간이 정해짐
+  function hourPillar(dayStem, hb) {
+    var stem = ((dayStem % 5) * 2 + hb) % 10;
+    return pillarSB(stem, hb);
+  }
+
+  function sexIndex(stem, branch) {
+    for (var i = 0; i < 60; i++) {
+      if (i % 10 === stem && i % 12 === branch) return i;
+    }
+    return 0;
+  }
+
+  function pillarHtml(label, p) {
+    if (!p) {
+      return '<div class="pillar"><div class="label">시주</div>' +
+             '<div class="ganji">-</div><div class="elem">시간 미입력</div></div>';
+    }
+    return '<div class="pillar">' +
+      '<div class="label">' + label + '</div>' +
+      '<div class="ganji">' + p.text + '</div>' +
+      '<div class="hanja">' + p.hanja + '</div>' +
+      '<div class="elem">' + STEM_ELEM[p.stem] + ' / ' + BRANCH_ELEM[p.branch] + '</div>' +
+      '</div>';
+  }
+
+  function lineHtml(val, num, isMoving) {
+    var graphic = val === 1
+      ? '<div class="yang"></div>'
+      : '<div class="yin"><span></span><span></span></div>';
+    var type = val === 1 ? '양효(⚊)' : '음효(⚋)';
+    var tag = isMoving ? '<span class="tag">★ 동효</span>' : '';
+    return '<div class="hex-line ' + (isMoving ? 'moving' : '') + '">' +
+      '<div class="line-graphic">' + graphic + '</div>' +
+      '<div class="line-text"><span class="line-num">' + num + '효</span>' +
+      '<strong>[' + type + ']</strong>' + tag +
+      '<div style="color:#ccc;font-size:0.85rem;margin-top:4px;">' + LINE_DESCS[num - 1] + '</div>' +
+      '</div></div>';
+  }
+
+  // 자미두수 명반 (재미용 연출)
+  function renderZiwei(mingIdx, mainIdx, name, pillarsText) {
+    var POS = [
+      [4,1],[4,2],[4,3],[4,4],[3,4],[2,4],[1,4],[1,3],[1,2],[1,1],[2,1],[3,1]
+    ];
+    var box = document.getElementById('ziwei');
+    var html = '';
+    for (var b = 0; b < 12; b++) {
+      var palace = PALACES[(b - mingIdx + 12) % 12];
+      var star = MAIN_STARS[(mainIdx + b) % MAIN_STARS.length];
+      html += '<div class="ziwei-cell" style="grid-row:' + POS[b][0] + ';grid-column:' + POS[b][1] + '">' +
+        '<div class="star">' + star + '</div>' +
+        '<div class="branch">' + BRANCHES[b] + '</div>' +
+        '<div class="palace">' + palace + '</div>' +
+        '</div>';
+    }
+    html += '<div class="ziwei-cell ziwei-center" style="grid-row:2 / span 2;grid-column:2 / span 2">' +
+      '<div style="color:var(--gold);font-weight:bold;">' + name + ' 님의 명반</div>' +
+      '<div style="color:var(--muted);font-size:0.85rem;margin-top:6px;">' + pillarsText + '</div>' +
+      '<div style="color:var(--purple);font-size:0.85rem;margin-top:6px;">[ 명궁 주성: ' + MAIN_STARS[mainIdx % MAIN_STARS.length] + ' ]</div>' +
+      '</div>';
+    box.innerHTML = html;
+  }
+
+  document.getElementById('sajuForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var errorEl = document.getElementById('error');
+    errorEl.textContent = '';
+
+    try {
+      var name = document.getElementById('name').value || '홍길동';
+      var dateVal = document.getElementById('birth').value;
+      if (!dateVal) {
+        errorEl.textContent = '생년월일을 입력해 주세요.';
+        return;
+      }
+      var parts = dateVal.split('-');
+      var y = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      var d = parseInt(parts[2], 10);
+      var hourVal = document.getElementById('hour').value;
+      var hb = hourVal === '' ? null : parseInt(hourVal, 10);
+
+      // 사주 4기둥
+      var yp = yearPillar(y, m, d);
+      var mp = monthPillar(yp.stem, m, d);
+      var dp = dayPillar(y, m, d);
+      var hp = hb === null ? null : hourPillar(dp.stem, hb);
+
+      document.getElementById('pillars').innerHTML =
+        pillarHtml('년주', yp) + pillarHtml('월주', mp) +
+        pillarHtml('일주', dp) + pillarHtml('시주', hp);
+
+      // 오행 분포
+      var counts = { '목': 0, '화': 0, '토': 0, '금': 0, '수': 0 };
+      var list = [yp, mp, dp];
+      if (hp) list.push(hp);
+      list.forEach(function (p) {
+        counts[STEM_ELEM[p.stem]]++;
+        counts[BRANCH_ELEM[p.branch]]++;
+      });
+      document.getElementById('elements').innerHTML = ELEMS.map(function (e) {
+        return '<div class="elem-box"><div class="name">' + e + '</div><div class="count">' + counts[e] + '</div></div>';
+      }).join('');
+
+      // 일간 풀이
+      var dayName = STEMS[dp.stem];
+      document.getElementById('reading').innerHTML =
+        '<p><strong>일간: ' + dayName + '(' + STEM_HANJA[dp.stem] + ', ' + STEM_ELEM[dp.stem] + ')</strong></p>' +
+        '<p>' + DAY_READING[dayName] + '</p>' +
+        '<p class="note">가장 많은 오행이 성향을 드러내고, 부족한 오행은 생활에서 보완한다는 것이 일반적인 해석입니다.</p>';
+
+      // 주역 64괘 (생년월일·시간 숫자로 괘 선택: 재미용)
+      var sum = y + m + d;
+      var hbUse = hb === null ? 0 : hb;
+      var up = sum % 8;
+      var lo = (sum + hbUse) % 8;
+      var hexNo = KW[up][lo];
+      var moving = ((sum + hbUse) % 6) + 1;
+      var lineVals = TRIGRAMS[lo].lines.concat(TRIGRAMS[up].lines); // 초효→상효
+
+      document.getElementById('hexTitle').textContent =
+        hexNo + '번 괘 · ' + HEX_NAMES[hexNo] + '괘 (' + TRIGRAMS[up].hanja + '上 / ' + TRIGRAMS[lo].hanja + '下)';
+      document.getElementById('hexSub').textContent =
+        '동효(움직이는 효)는 ' + moving + '효입니다. 상효부터 초효 순으로 표시합니다.';
+
+      var linesHtml = '';
+      for (var k = 5; k >= 0; k--) {
+        linesHtml += lineHtml(lineVals[k], k + 1, (k + 1) === moving);
+      }
+      document.getElementById('hexLines').innerHTML = linesHtml;
+
+      // 자미두수 명반 (연출)
+      var mingIdx = ((2 + (m - 1) - hbUse) % 12 + 12) % 12;
+      var mainIdx = (yp.stem + d) % MAIN_STARS.length;
+      renderZiwei(mingIdx, mainIdx, name,
+        yp.text + '년 · ' + mp.text + '월 · ' + dp.text + '일' + (hp ? ' · ' + hp.text + '시' : ''));
+
+      // 대운 (월주 다음 간지부터 10년씩, 시작 나이는 가정값)
+      var baseIdx = sexIndex(mp.stem, mp.branch);
+      var daeunHtml = '';
+      for (var i = 0; i < 5; i++) {
+        var di = (baseIdx + 1 + i) % 60;
+        var s = di % 10, b = di % 12;
+        var startAge = 4 + i * 10;
+        daeunHtml += '<div class="mini-card">' +
+          '<div class="title">' + startAge + '~' + (startAge + 9) + '세</div>' +
+          '<div class="ganji">' + STEMS[s] + BRANCHES[b] + '</div>' +
+          '<div class="kw">' + ELEM_KEYWORD[STEM_ELEM[s]] + '</div></div>';
+      }
+      document.getElementById('daeun').innerHTML = daeunHtml;
+
+      // 월운 (년간 기준 寅월부터 양력 1~12월에 대응)
+      var monthlyHtml = '';
+      for (var mo = 1; mo <= 12; mo++) {
+        var mb = mo % 12;
+        var ms = monthStemFrom(yp.stem, mb);
+        monthlyHtml += '<div class="mini-card">' +
+          '<div class="title">' + mo + '월</div>' +
+          '<div class="ganji">' + STEMS[ms] + BRANCHES[mb] + '</div>' +
+          '<div class="kw">' + ELEM_KEYWORD[STEM_ELEM[ms]] + '</div></div>';
+      }
+      document.getElementById('monthly').innerHTML = monthlyHtml;
+
+      // 종합 총평
+      document.getElementById('summary').innerHTML =
+        '<p><strong>' + name + '</strong>님의 일간은 <strong>' + dayName + '</strong>이며, ' + DAY_READING[dayName] + '</p>' +
+        '<p>괘는 <strong>' + HEX_NAMES[hexNo] + '괘</strong>가 나왔고, 동효인 ' + moving + '효가 이번 흐름에서 가장 주목할 지점입니다. ' +
+        LINE_DESCS[moving - 1] + '</p>' +
+        '<p>자미두수 명반의 명궁 주성은 <strong>' + MAIN_STARS[mainIdx % MAIN_STARS.length] + '</strong>로 연출되었습니다. 대운과 월운은 흐름을 가볍게 보는 참고 자료로만 활용해 주세요.</p>';
+
+      var result = document.getElementById('result');
+      result.classList.remove('hidden');
+      result.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+      errorEl.textContent = '계산 중 오류가 발생했습니다. 다시 시도해 주세요.';
+      console.error(err);
+    }
+  });
+</script>
+</body>
+</html>
