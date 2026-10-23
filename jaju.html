@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>사주 · 주역 · 자미두수 풀이 (재미용)</title>
+  <style>
+    :root {
+      --bg: #0f0c1b;
+      --card: #1a162b;
+      --line: #3a3252;
+      --gold: #ffd700;
+      --purple: #9d4edd;
+      --text: #e0e0e0;
+      --muted: #a09bb5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+      line-height: 1.6;
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    h1 { text-align: center; color: var(--gold); font-size: 1.8rem; margin: 10px 0 6px; }
+    .sub { text-align: center; color: var(--muted); font-size: 0.9rem; margin-bottom: 14px; }
+    .notice {
+      background: #2a2140;
+      border: 1px dashed var(--purple);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      color: #d6c7f0;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    label { display: block; color: var(--gold); font-weight: bold; margin-bottom: 6px; font-size: 0.95rem; }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      background: #251f3d;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--purple), #5a189a);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    .error { color: #ff7b7b; margin-top: 12px; text-align: center; min-height: 1.4em; }
+    .hidden { display: none; }
+
+    h2 {
+      color: var(--gold);
+      border-left: 4px solid var(--purple);
+      padding-left: 10px;
+      font-size: 1.3rem;
+      margin: 28px 0 14px;
+    }
+    .pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .pillar {
+      background: #221c38;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 6px;
+      text-align: center;
+    }
+    .pillar .label { color: var(--muted); font-size: 0.85rem; }
+    .pillar .ganji { font-size: 1.7rem; font-weight: bold; color: #fff; margin: 4px 0; }
+    .pillar .hanja { color: var(--gold); font-size: 0.9rem; }
+    .pillar .elem { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
+
+    .elements { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; text-align: center; }
+    .elem-box { background: #181328; border-radius: 8px; padding: 10px 4px; border: 1px solid var(--line); }
+    .elem-box .name { font-weight: bold; color: var(--gold); }
+    .elem-box .count { font-size: 1.2rem; }
+
+    .note { color: var(--muted); font-size: 0.85rem; margin-top: 10px; }
+    .reading p { margin: 8px 0; }
+
+    .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+    .mini-card {
+      background: #181328;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .mini-card .title { color: var(--gold); font-weight: bold; }
+    .mini-card .ganji { color: #fff; font-size: 1.1rem; margin: 4px 0; }
+    .mini-card .kw { color: var(--muted); font-size: 0.85rem; }
+
+    .hex-title { color: var(--gold); font-size: 1.2rem; font-weight: bold; margin-bottom: 4px; }
+    .hex-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 12px; }
+    .hex-line {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #221c38;
+      border-left: 4px solid transparent;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .hex-line.moving { border-left-color: var(--gold); background: #2d244a; }
+    .line-graphic { width: 110px; height: 14px; flex-shrink: 0; }
+    .yang { height: 100%; background: var(--gold); border-radius: 2px; }
+    .yin { height: 100%; display: flex; justify-content: space-between; }
+    .yin span { width: 45%; height: 100%; background: #777; border-radius: 2px; }
+    .line-text { font-size: 0.92rem; }
+    .line-num { color: var(--gold); font-weight: bold; margin-right: 6px; }
+    .tag {
+      background: var(--purple);
+      color: #fff;
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+
+    .ziwei-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, auto);
+      gap: 8px;
+    }
