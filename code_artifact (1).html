@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>고요한 마음 - 온라인 명상원</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Noto Sans KR & Cinzel) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        zen: {
+                            50: '#f6f7f5',
+                            100: '#e3e7e0',
+                            200: '#c8d1c2',
+                            300: '#a5b49d',
+                            400: '#84967a',
+                            500: '#677a5e',
+                            600: '#506149',
+                            700: '#404e3b',
+                            800: '#354032',
+                            900: '#2d372b',
+                        },
+                        sand: {
+                            100: '#fcfaf7',
+                            200: '#f5efdf',
+                            300: '#e8dbbe',
+                            400: '#d9c49a'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans KR', 'sans-serif'],
+                        serif: ['Cinzel', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #182219 0%, #0d140e 50%, #171f24 100%);
+            color: #e3e7e0;
+            font-family: 'Noto Sans KR', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* 촛불 및 연꽃 숨결 애니메이션 */
+        @keyframes breath {
+            0%, 100% { transform: scale(1); opacity: 0.85; box-shadow: 0 0 25px rgba(232, 219, 190, 0.2); }
+            50% { transform: scale(1.08); opacity: 1; box-shadow: 0 0 50px rgba(232, 219, 190, 0.45); }
+        }
+
+        .breath-animation {
+            animation: breath 8s ease-in-out infinite;
+        }
+
+        @keyframes float-slow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .float-avatar {
+            animation: float-slow 4s ease-in-out infinite;
+        }
+
+        /* 아바타 자리 배치 10인 원형 포지셔닝 */
+        .seat-ring {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen justify-between selection:bg-zen-500 selection:text-white">
+
+    <!-- Header Navigation -->
+    <header class="border-b border-white/10 backdrop-blur-md bg-black/20 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-zen-600/40 border border-zen-300/30 flex items-center justify-center text-zen-200">
+                    <i class="fa-solid fa-om text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-serif text-xl tracking-wider text-sand-200 font-semibold">고요한 마음 <span class="text-xs font-sans text-zen-300 font-normal">| 온라인 명상원</span></h1>
+                    <p class="text-xs text-gray-400">함께하는 마음챙김 명상 공간</p>
+                </div>
+            </div>
+
+            <!-- Header Quick Stats -->
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full text-sm">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-gray-300 text-xs sm:text-sm">현재 수련 인원: <strong id="headcountText" class="text-sand-200 font-semibold">1</strong> / 10명</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 flex-grow w-full items-start">
+        
+        <!-- Left & Center: Meditation Hall (8 cols on large screens) -->
+        <section class="lg:col-span-8 flex flex-col items-center space-y-6">
+            
+            <!-- Hall Header & Controls Bar -->
+            <div class="w-full flex flex-wrap justify-between items-center gap-4 bg-white/5 backdrop-blur-sm border border-white/10 p-4 rounded-2xl">
+                <div>
+                    <h2 class="text-lg font-medium text-sand-100 flex items-center gap-2">
+                        <i class="fa-solid fa-users text-zen-300"></i> 제1 평온 수련실
+                    </h2>
+                    <p class="text-xs text-gray-400">최대 10명의 명상가가 한 공간에서 호흡을 맞춥니다.</p>
+                </div>
+
+                <!-- Simulating bot enter/leave controls for test -->
+                <div class="flex items-center space-x-2 text-xs">
+                    <button id="toggleAutoSimBtn" onclick="toggleAutoSimulation()" class="px-3 py-1.5 rounded-lg border border-zen-500/50 bg-zen-900/50 hover:bg-zen-800 text-zen-200 transition">
+                        <i class="fa-solid fa-robot mr-1"></i> 자동 입장/퇴장: <span id="simStatusText" class="text-emerald-400 font-medium">켜짐</span>
+                    </button>
+                    <button onclick="addSimulatedUser()" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-200 transition" title="가상 멤버 추가">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </button>
+                    <button onclick="removeSimulatedUser()" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-200 transition" title="가상 멤버 퇴장">
+                        <i class="fa-solid fa-user-minus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Meditation Circle Visual Area -->
+            <div class="relative w-full aspect-square max-w-[500px] sm:max-w-[540px] bg-gradient-to-b from-zen-900/40 via-black/40 to-zen-900/40 rounded-full border border-zen-500/20 shadow-2xl flex items-center justify-center p-6 my-4">
+                
+                <!-- Circular Guide Lines -->
+                <div class="absolute inset-8 rounded-full border border-dashed border-zen-300/10 pointer-events-none"></div>
+                <div class="absolute inset-24 rounded-full border border-zen-300/5 pointer-events-none"></div>
+
+                <!-- Center Lotus/Zen Candle Altar -->
+                <div class="z-10 flex flex-col items-center text-center breath-animation cursor-pointer" onclick="playSingingBowlSound()" title="클릭하여 싱잉볼 울리기">
+                    <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-sand-400/20 via-zen-500/30 to-sand-200/20 border border-sand-300/40 flex items-center justify-center backdrop-blur-md shadow-inner group">
+                        <div class="text-4xl sm:text-5xl text-sand-200 group-hover:scale-110 transition-transform duration-500">
+                            🪷
+                        </div>
+                    </div>
+                    <span class="mt-2 text-xs tracking-widest text-sand-300/80 uppercase font-serif">Quiet Mind</span>
+                    <span class="text-[10px] text-gray-400">중앙 알타 (클릭시 타종)</span>
+                </div>
+
+                <!-- 10 Avatar Slots Positions Container -->
+                <div id="avatarCircle" class="absolute inset-0 pointer-events-none">
+                    <!-- Dynamic seats will be rendered by JS -->
+                </div>
+            </div>
+
+            <!-- User Entry / Avatar Setup Card -->
+            <div class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-md">
+                <h3 class="text-md font-medium text-sand-200 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-user-gear text-zen-300"></i> 내 명상 아바타 설정
+                </h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                    <!-- Name Input -->
+                    <div>
+                        <label class="block text-xs text-gray-300 mb-1">명상가 닉네임</label>
+                        <input type="text" id="userNameInput" value="마음평온" maxlength="8" class="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2 text-sm text-sand-100 focus:outline-none focus:border-zen-400 transition" placeholder="이름 입력">
+                    </div>
+
+                    <!-- Icon Selector -->
+                    <div>
+                        <label class="block text-xs text-gray-300 mb-1">아바타 아이콘</label>
+                        <select id="userAvatarSelect" class="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2 text-sm text-sand-100 focus:outline-none focus:border-zen-400 transition">
+                            <option value="🧘">🧘 명상가 (기본)</option>
+                            <option value="🧘‍♀️">🧘‍♀️ 명상가 (여성)</option>
+                            <option value="🧘‍♂️">🧘‍♂️ 명상가 (남성)</option>
+                            <option value="🌿">🌿 싱그러운 잎</option>
+                            <option value="🕯️">🕯️ 평온한 촛불</option>
+                            <option value="🌊">🌊 깊은 파도</option>
+                            <option value="✨">✨ 은은한 빛</option>
+                        </select>
+                    </div>
+
+                    <!-- Join/Leave Toggle Button -->
+                    <div>
+                        <button id="entryBtn" onclick="toggleUserEntry()" class="w-full py-2.5 px-4 rounded-xl font-medium text-sm shadow-md transition-all duration-300 bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-right-to-bracket"></i> <span id="entryBtnText">수련실 입장하기</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Side: Meditation Timer & Ambient Sound Dashboard (4 cols) -->
+        <section class="lg:col-span-4 flex flex-col space-y-6">
+            
+            <!-- Meditation Timer Card -->
+            <div class="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-md flex flex-col items-center">
+                <div class="w-full flex justify-between items-center mb-4">
+                    <h3 class="text-md font-medium text-sand-200 flex items-center gap-2">
+                        <i class="fa-regular fa-clock text-zen-300"></i> 명상 타이머
+                    </h3>
+                    <span id="timerStatus" class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-gray-300">대기 중</span>
+                </div>
+
+                <!-- Timer Display -->
+                <div class="text-5xl font-serif font-light text-sand-100 my-3 tracking-widest" id="timerDisplay">
+                    05:00
+                </div>
+
+                <!-- Time Presets -->
+                <div class="flex space-x-2 my-3">
+                    <button onclick="setTimerMinutes(3)" class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/15 text-xs text-gray-300 border border-white/10 transition">3분</button>
+                    <button onclick="setTimerMinutes(5)" class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/15 text-xs text-sand-200 border border-sand-300/30 transition">5분</button>
+                    <button onclick="setTimerMinutes(10)" class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/15 text-xs text-gray-300 border border-white/10 transition">10분</button>
+                    <button onclick="setTimerMinutes(15)" class="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/15 text-xs text-gray-300 border border-white/10 transition">15분</button>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex items-center space-x-3 mt-2 w-full">
+                    <button id="timerToggleBtn" onclick="toggleTimer()" class="flex-1 py-2.5 rounded-xl bg-zen-600 hover:bg-zen-500 text-white font-medium text-sm transition flex items-center justify-center gap-2">
+                        <i id="timerIcon" class="fa-solid fa-play text-xs"></i> <span id="timerBtnText">시작</span>
+                    </button>
+                    <button onclick="resetTimer()" class="py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 text-sm transition">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sound Generator Card (Web Audio API) -->
+            <div class="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-md">
+                <h3 class="text-md font-medium text-sand-200 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-music text-zen-300"></i> 마음 챙김 음향 (Web Audio)
+                </h3>
+
+                <div class="space-y-4">
+                    <!-- Singing Bowl Trigger -->
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-white/5">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg bg-sand-400/20 flex items-center justify-center text-sand-200">
+                                🥣
+                            </div>
+                            <div>
+                                <div class="text-sm text-sand-100 font-medium">싱잉볼 (Singing Bowl)</div>
+                                <div class="text-[11px] text-gray-400">맑은 종소리로 마음을 정돈합니다</div>
+                            </div>
+                        </div>
+                        <button onclick="playSingingBowlSound()" class="px-3 py-1.5 rounded-lg bg-sand-300/20 hover:bg-sand-300/30 text-sand-200 text-xs font-medium border border-sand-300/30 transition">
+                            <i class="fa-solid fa-bell mr-1"></i> 타종
+                        </button>
+                    </div>
+
+                    <!-- Ambient Noise Synthesizer (Rain / Breeze Tone) -->
+                    <div class="p-3 rounded-xl bg-black/30 border border-white/5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-lg bg-zen-500/20 flex items-center justify-center text-zen-300">
+                                    🌧️
+                                </div>
+                                <div>
+                                    <div class="text-sm text-sand-100 font-medium">마음 조율 잔잔한 빗소리</div>
+                                    <div class="text-[11px] text-gray-400">자연의 백색 소음</div>
+                                </div>
+                            </div>
+                            <button id="rainToggleBtn" onclick="toggleRainSound()" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-200 text-xs font-medium transition">
+                                <i class="fa-solid fa-play mr-1"></i> 재생
+                            </button>
+                        </div>
+                        
+                        <!-- Volume Slider -->
+                        <div class="flex items-center space-x-2 pt-1">
+                            <i class="fa-solid fa-volume-low text-xs text-gray-400"></i>
+                            <input type="range" id="rainVolume" min="0" max="1" step="0.05" value="0.3" onchange="updateRainVolume(this.value)" class="w-full accent-zen-400 h-1 bg-white/20 rounded-lg cursor-pointer">
+                            <i class="fa-solid fa-volume-high text-xs text-gray-400"></i>
+                        </div>
+                    </div>
+
+                    <!-- Deep Meditation Om Drone Tone -->
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-black/30 border border-white/5">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-300">
+                                🕉️
+                            </div>
+                            <div>
+                                <div class="text-sm text-sand-100 font-medium">옴(Om) 공명 울림</div>
+                                <div class="text-[11px] text-gray-400">자연스러운 저음 진동 음향</div>
+                            </div>
+                        </div>
+                        <button id="omToggleBtn" onclick="toggleOmSound()" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-200 text-xs font-medium transition">
+                            <i class="fa-solid fa-play mr-1"></i> 재생
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Activity / Entry Log Card -->
+            <div class="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-md flex-grow">
+                <h3 class="text-xs font-medium text-gray-300 mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-list-ul text-zen-400"></i> 수련실 실시간 현황
+                </h3>
+                <div id="activityLog" class="text-xs space-y-1.5 max-h-36 overflow-y-auto pr-1 text-gray-400">
+                    <!-- Logs injected via JS -->
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 bg-black/40 py-4 mt-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-gray-500">
+            &copy; 고요한 마음 명상원. 함께 호흡하며 마음의 평화를 찾습니다.
+        </div>
+    </footer>
+
+    <!-- Audio & Logic Scripts -->
+    <script>
+        /* ----------------------------------------------------
+         * 1. STATE & CONSTANTS
+         * ---------------------------------------------------- */
+        const MAX_SEATS = 10;
+        
+        // Mock names for simulated meditation participants
+        const BOT_NAMES = ['지은', '민준', '서연', '도윤', '하은', '예준', '유진', '현우', '수아', '정훈'];
+        const BOT_AVATARS = ['🧘', '🧘‍♀️', '🧘‍♂️', '🌿', '🕯️'];
+
+        // Participant state list (Max 10)
+        let participants = [];
+        
+        // User state
+        let isUserEntered = false;
+        let userId = 'user_me';
+
+        // Auto Bot Simulation Toggle
+        let autoSimInterval = null;
+        let isAutoSimActive = true;
+
+        /* ----------------------------------------------------
+         * 2. INITIALIZATION & AVATAR CIRCLE RENDERING
+         * ---------------------------------------------------- */
+        window.addEventListener('load', () => {
+            // Seed initial 3 simulated participants
+            addBotParticipant('지은', '🧘‍♀️');
+            addBotParticipant('민준', '🧘‍♂️');
+            addBotParticipant('서연', '🧘');
+
+            // Default auto user enter
+            toggleUserEntry();
+
+            // Start Bot simulation loop
+            startAutoSimulation();
+
+            // Render UI
+            renderSeats();
+            logActivity("명상원 수련실이 개장되었습니다.");
+        });
+
+        function renderSeats() {
+            const container = document.getElementById('avatarCircle');
+            container.innerHTML = '';
+
+            const totalSpots = MAX_SEATS;
+            const radiusPercent = 40; // distance from center in %
+
+            for (let i = 0; i < totalSpots; i++) {
+                // Calculate angle for circular placement (0 to 2*PI)
+                const angle = (i * (2 * Math.PI / totalSpots)) - (Math.PI / 2); // Start at top
+                const leftPos = 50 + radiusPercent * Math.cos(angle);
+                const topPos = 50 + radiusPercent * Math.sin(angle);
+
+                const participant = participants[i];
+
+                const seatElem = document.createElement('div');
+                seatElem.className = 'absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto transition-all duration-700';
+                seatElem.style.left = `${leftPos}%`;
+                seatElem.style.top = `${topPos}%`;
+
+                if (participant) {
+                    const isMe = participant.isMe;
+                    seatElem.innerHTML = `
+                        <div class="flex flex-col items-center group cursor-pointer float-avatar" style="animation-delay: ${i * 0.4}s">
+                            <!-- Avatar Circle -->
+                            <div class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-lg border backdrop-blur-md transition-transform duration-300 group-hover:scale-110 
+                                ${isMe ? 'bg-emerald-900/60 border-emerald-400 ring-2 ring-emerald-400/50 shadow-emerald-500/20' : 'bg-zen-900/60 border-zen-300/30 text-sand-100'}">
+                                <span>${participant.avatar}</span>
+                                
+                                ${isMe ? `<span class="absolute -top-1 -right-1 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full border border-emerald-300">나</span>` : ''}
+                            </div>
+                            
+                            <!-- Name Badge -->
+                            <div class="mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border backdrop-blur-sm whitespace-nowrap
+                                ${isMe ? 'bg-emerald-900/80 border-emerald-400/50 text-emerald-200' : 'bg-black/60 border-white/10 text-gray-300'}">
+                                ${participant.name}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Empty Seat Placeholder
+                    seatElem.innerHTML = `
+                        <div class="flex flex-col items-center opacity-40 hover:opacity-75 transition-opacity cursor-pointer" onclick="handleEmptySeatClick(${i})">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-dashed border-white/20 flex items-center justify-center text-gray-500 bg-black/20">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                            </div>
+                            <span class="mt-1 text-[10px] text-gray-500">빈 방석</span>
+                        </div>
+                    `;
+                }
+
+                container.appendChild(seatElem);
+            }
+
+            // Update counter in header
+            document.getElementById('headcountText').innerText = participants.length;
+        }
+
+        /* ----------------------------------------------------
+         * 3. USER & BOT ENTRY/LEAVE LOGIC
+         * ---------------------------------------------------- */
+        function toggleUserEntry() {
+            const nameInput = document.getElementById('userNameInput');
+            const avatarSelect = document.getElementById('userAvatarSelect');
+            const btn = document.getElementById('entryBtn');
+            const btnText = document.getElementById('entryBtnText');
+
+            if (!isUserEntered) {
+                // Try Join
+                if (participants.length >= MAX_SEATS) {
+                    alert('현재 수련실(10명)이 가득 찼습니다. 잠시 후 다시 시도해 주세요.');
+                    return;
+                }
+
+                const userName = nameInput.value.trim() || '나';
+                const userAvatar = avatarSelect.value;
+
+                // Add User to List
+                participants.push({
+                    id: userId,
+                    name: userName,
+                    avatar: userAvatar,
+                    isMe: true
+                });
+
+                isUserEntered = true;
+
+                // UI Update
+                btn.className = "w-full py-2.5 px-4 rounded-xl font-medium text-sm shadow-md transition-all duration-300 bg-rose-700 hover:bg-rose-600 text-white flex items-center justify-center gap-2";
+                btnText.innerText = "수련실 퇴장하기";
+                nameInput.disabled = true;
+                avatarSelect.disabled = true;
+
+                logActivity(`✨ <strong>${userName}</strong>(나) 님이 명상실에 입장하셨습니다.`);
+            } else {
+                // Leave
+                participants = participants.filter(p => !p.isMe);
+                isUserEntered = false;
+
+                // UI Update
+                btn.className = "w-full py-2.5 px-4 rounded-xl font-medium text-sm shadow-md transition-all duration-300 bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2";
+                btnText.innerText = "수련실 입장하기";
+                nameInput.disabled = false;
+                avatarSelect.disabled = false;
+
+                logActivity(`👋 <strong>내 아바타</strong>가 수련실에서 퇴장했습니다.`);
+            }
+
+            renderSeats();
+        }
+
+        function handleEmptySeatClick(index) {
+            if (!isUserEntered) {
+                toggleUserEntry();
+            }
+        }
+
+        function addSimulatedUser() {
+            if (participants.length >= MAX_SEATS) return;
+
+            const randomName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
+            const randomAvatar = BOT_AVATARS[Math.floor(Math.random() * BOT_AVATARS.length)];
+
+            // Ensure unique name
+            const currentNames = participants.map(p => p.name);
+            let finalName = randomName;
+            let counter = 1;
+            while (currentNames.includes(finalName)) {
+                finalName = `${randomName}${counter++}`;
+            }
+
+            addBotParticipant(finalName, randomAvatar);
+            logActivity(`🧘 <strong>${finalName}</strong> 님이 수련실에 입장하셨습니다.`);
+            renderSeats();
+        }
+
+        function addBotParticipant(name, avatar) {
+            if (participants.length < MAX_SEATS) {
+                participants.push({
+                    id: 'bot_' + Math.random().toString(36).substr(2, 9),
+                    name: name,
+                    avatar: avatar,
+                    isMe: false
+                });
+            }
+        }
+
+        function removeSimulatedUser() {
+            // Remove random non-user participant
+            const botIndices = participants.map((p, idx) => p.isMe ? -1 : idx).filter(idx => idx !== -1);
+            if (botIndices.length === 0) return;
+
+            const removeIdx = botIndices[Math.floor(Math.random() * botIndices.length)];
+            const removed = participants.splice(removeIdx, 1)[0];
+
+            logActivity(`🍃 <strong>${removed.name}</strong> 님이 명상을 마치고 퇴장하셨습니다.`);
+            renderSeats();
+        }
+
+        function startAutoSimulation() {
+            if (autoSimInterval) clearInterval(autoSimInterval);
+
+            // Periodically join or leave randomly every 8~15 seconds
+            autoSimInterval = setInterval(() => {
+                if (!isAutoSimActive) return;
+
+                const roll = Math.random();
+                if (roll > 0.45 && participants.length < MAX_SEATS) {
+                    addSimulatedUser();
+                } else if (roll <= 0.45 && participants.length > (isUserEntered ? 1 : 0)) {
+                    removeSimulatedUser();
+                }
+            }, 10000);
+        }
+
+        function toggleAutoSimulation() {
+            isAutoSimActive = !isAutoSimActive;
+            document.getElementById('simStatusText').innerText = isAutoSimActive ? '켜짐' : '꺼짐';
+            document.getElementById('simStatusText').className = isAutoSimActive ? 'text-emerald-400 font-medium' : 'text-gray-400 font-medium';
+        }
+
+        function logActivity(message) {
+            const logContainer = document.getElementById('activityLog');
+            const timeStr = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const logItem = document.createElement('div');
+            logItem.className = 'flex justify-between items-center bg-white/5 px-2.5 py-1 rounded border border-white/5';
+            logItem.innerHTML = `<span>${message}</span> <span class="text-[10px] text-gray-500 ml-2">${timeStr}</span>`;
+
+            logContainer.prepend(logItem);
+
+            // Keep log size clean
+            if (logContainer.children.length > 15) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+
+        /* ----------------------------------------------------
+         * 4. MEDITATION TIMER LOGIC
+         * ---------------------------------------------------- */
+        let timerSeconds = 300; // 5 min default
+        let initialTimerSeconds = 300;
+        let timerInterval = null;
+        let isTimerRunning = false;
+
+        function setTimerMinutes(mins) {
+            if (isTimerRunning) resetTimer();
+            initialTimerSeconds = mins * 60;
+            timerSeconds = initialTimerSeconds;
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timerSeconds / 60);
+            const seconds = timerSeconds % 60;
+            document.getElementById('timerDisplay').innerText = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function toggleTimer() {
+            if (!isTimerRunning) {
+                startTimer();
+            } else {
+                pauseTimer();
+            }
+        }
+
+        function startTimer() {
+            initAudioContext();
+            isTimerRunning = true;
+            document.getElementById('timerBtnText').innerText = '일시정지';
+            document.getElementById('timerIcon').className = 'fa-solid fa-pause text-xs';
+            document.getElementById('timerStatus').innerText = '명상 진행 중';
+            document.getElementById('timerStatus').className = 'text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+
+            playSingingBowlSound(); // Start bell chime
+
+            timerInterval = setInterval(() => {
+                if (timerSeconds > 0) {
+                    timerSeconds--;
+                    updateTimerDisplay();
+                } else {
+                    pauseTimer();
+                    playSingingBowlSound();
+                    logActivity("🔔 설정한 명상 시간이 종료되었습니다. 편안한 숨을 쉬어보세요.");
+                    document.getElementById('timerStatus').innerText = '명상 완료';
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            isTimerRunning = false;
+            clearInterval(timerInterval);
+            document.getElementById('timerBtnText').innerText = '계속';
+            document.getElementById('timerIcon').className = 'fa-solid fa-play text-xs';
+            document.getElementById('timerStatus').innerText = '일시 정지';
+            document.getElementById('timerStatus').className = 'text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            timerSeconds = initialTimerSeconds;
+            updateTimerDisplay();
+            document.getElementById('timerStatus').innerText = '대기 중';
+            document.getElementById('timerStatus').className = 'text-xs px-2 py-0.5 rounded-full bg-white/10 text-gray-300';
+        }
+
+
+        /* ----------------------------------------------------
+         * 5. WEB AUDIO API SYNTHESIZER (Singing Bowl & Ambient)
+         * ---------------------------------------------------- */
+        let audioCtx = null;
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Singing Bowl Pure Tone Generator
+        function playSingingBowlSound() {
+            initAudioContext();
+            
+            const now = audioCtx.currentTime;
+            
+            // Fundamental frequency + Harmonics
+            const freqs = [216, 432, 864];
+            freqs.forEach((freq, idx) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+
+                // Gentle exponential decay for singing bowl resonance
+                const initialGain = 0.25 / (idx + 1);
+                gain.gain.setValueAtTime(initialGain, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 5.5 + idx);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(now);
+                osc.stop(now + 6);
+            });
+        }
+
+        // Rain Noise Generator Logic
+        let rainNode = null;
+        let rainGainNode = null;
+        let isRainPlaying = false;
+
+        function toggleRainSound() {
+            initAudioContext();
+            const btn = document.getElementById('rainToggleBtn');
+
+            if (!isRainPlaying) {
+                // Create White Noise Buffer for Rain effect
+                const bufferSize = audioCtx.sampleRate * 2;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const whiteNoise = audioCtx.createBufferSource();
+                whiteNoise.buffer = buffer;
+                whiteNoise.loop = true;
+
+                // Low-pass filter to make it sound like gentle rain/wind
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+
+                rainGainNode = audioCtx.createGain();
+                const vol = parseFloat(document.getElementById('rainVolume').value);
+                rainGainNode.gain.setValueAtTime(vol * 0.15, audioCtx.currentTime);
+
+                whiteNoise.connect(filter);
+                filter.connect(rainGainNode);
+                rainGainNode.connect(audioCtx.destination);
+
+                whiteNoise.start();
+                rainNode = whiteNoise;
+                isRainPlaying = true;
+
+                btn.innerHTML = `<i class="fa-solid fa-pause mr-1"></i> 정지`;
+                btn.className = "px-3 py-1.5 rounded-lg bg-zen-600 text-white text-xs font-medium transition";
+            } else {
+                if (rainNode) {
+                    rainNode.stop();
+                    rainNode.disconnect();
+                }
+                isRainPlaying = false;
+                btn.innerHTML = `<i class="fa-solid fa-play mr-1"></i> 재생`;
+                btn.className = "px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-200 text-xs font-medium transition";
+            }
+        }
+
+        function updateRainVolume(val) {
+            if (rainGainNode && audioCtx) {
+                rainGainNode.gain.setValueAtTime(parseFloat(val) * 0.15, audioCtx.currentTime);
+            }
+        }
+
+        // Om Meditation Drone Tone (Low Harmonic Oscillation)
+        let omOsc1 = null;
+        let omOsc2 = null;
+        let omGain = null;
+        let isOmPlaying = false;
+
+        function toggleOmSound() {
+            initAudioContext();
+            const btn = document.getElementById('omToggleBtn');
+
+            if (!isOmPlaying) {
+                const now = audioCtx.currentTime;
+                omOsc1 = audioCtx.createOscillator();
+                omOsc2 = audioCtx.createOscillator();
+                omGain = audioCtx.createGain();
+
+                // Low grounding Om frequencies (136.1 Hz - OM frequency)
+                omOsc1.type = 'sine';
+                omOsc1.frequency.setValueAtTime(136.1, now);
+
+                omOsc2.type = 'sine';
+                omOsc2.frequency.setValueAtTime(272.2, now); // 1 octave up harmonic
+
+                omGain.gain.setValueAtTime(0.01, now);
+                omGain.gain.linearRampToValueAtTime(0.12, now + 2); // Warm fade-in
+
+                omOsc1.connect(omGain);
+                omOsc2.connect(omGain);
+                omGain.connect(audioCtx.destination);
+
+                omOsc1.start(now);
+                omOsc2.start(now);
+                isOmPlaying = true;
+
+                btn.innerHTML = `<i class="fa-solid fa-pause mr-1"></i> 정지`;
+                btn.className = "px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium transition";
+            } else {
+                if (omGain) {
+                    omGain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+                    setTimeout(() => {
+                        if (omOsc1) omOsc1.stop();
+                        if (omOsc2) omOsc2.stop();
+                    }, 1000);
+                }
+                isOmPlaying = false;
+                btn.innerHTML = `<i class="fa-solid fa-play mr-1"></i> 재생`;
+                btn.className = "px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-200 text-xs font-medium transition";
+            }
+        }
+    </script>
+</body>
+</html>
