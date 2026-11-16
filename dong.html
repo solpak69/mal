@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정밀 2D 동인(銅人) 혈자리 자침 시뮬레이터</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #1e242b;
+            color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 520px;
+            width: 100%;
+            background: #283039;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            border: 1px solid #3a4552;
+        }
+        h2 {
+            margin-top: 0;
+            color: #e6c27a;
+            font-size: 1.3rem;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+        .keywords {
+            font-size: 0.8rem;
+            color: #a0aab5;
+            margin-bottom: 12px;
+            line-height: 1.4;
+            background: #1e242b;
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #455261;
+            background: #1e242b;
+            color: #fff;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        input[type="text"]::placeholder {
+            color: #6c7a89;
+        }
+        button {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-search {
+            background: linear-gradient(135deg, #c59b47, #9c752b);
+            color: #fff;
+        }
+        .btn-search:hover { filter: brightness(1.1); }
+        .btn-start {
+            width: 100%;
+            background: linear-gradient(135deg, #d9534f, #a93226);
+            color: white;
+            margin-top: 12px;
+            display: none;
+            box-shadow: 0 4px 12px rgba(217, 83, 79, 0.3);
+        }
+        .btn-start:hover { filter: brightness(1.1); }
+        .result-box {
+            background: #1e242b;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.92rem;
+            color: #e0e6ed;
+            min-height: 44px;
+            border-left: 4px solid #c59b47;
+        }
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            height: 480px;
+            background: radial-gradient(circle at 50% 45%, #343f4b 0%, #181d23 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #3a4552;
+        }
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+        .needle {
+            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s;
+            opacity: 0;
+            transform: translate(18px, -32px);
+        }
+        .needle.inserted {
+            opacity: 1;
+            transform: translate(0, 0);
+        }
+        .point-pulse {
+            animation: pulse 1.6s infinite;
+        }
+        @keyframes pulse {
+            0% { r: 4; opacity: 0.9; }
+            100% { r: 15; opacity: 0; }
+        }
+        .point-label-bg {
+            fill: rgba(20, 25, 30, 0.8);
+            rx: 4;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>정밀 2D 동인(銅人) 자침 시뮬레이터</h2>
+    <div class="keywords">지원 증상 (12종): 코막힘, 두통, 소화불량, 피로, 눈피로, 목결림, 불면, 스트레스, 생리통, 멀미, 여드름, 부종</div>
+    
+    <div class="input-group">
+        <input type="text" id="symptomInput" placeholder="증상 입력 (예: 코가 맹맹해요, 두통)" onkeypress="if(event.key==='Enter') searchSymptom()">
+        <button class="btn-search" onclick="searchSymptom()">혈자리 탐색</button>
+    </div>
+
+    <div class="result-box" id="resultBox">
+        증상을 입력하면 동인(銅人) 위에 경혈 위치가 표시됩니다.
+    </div>
+
+    <div class="canvas-wrapper">
+        <svg id="bodySvg" viewBox="0 0 320 480">
+            <defs>
+                <!-- 청동(동인) 입체 그라데이션 -->
+                <linearGradient id="bronzeBody" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#5c4328"/>
+                    <stop offset="28%" stop-color="#b58952"/>
+                    <stop offset="50%" stop-color="#e3be82"/>
+                    <stop offset="72%" stop-color="#a87b46"/>
+                    <stop offset="100%" stop-color="#4a341d"/>
+                </linearGradient>
+
+                <radialGradient id="bronzeHead" cx="45%" cy="40%" r="55%">
+                    <stop offset="0%" stop-color="#ebd09e"/>
+                    <stop offset="55%" stop-color="#b58952"/>
+                    <stop offset="85%" stop-color="#785632"/>
+                    <stop offset="100%" stop-color="#47311a"/>
+                </radialGradient>
+
+                <linearGradient id="bronzeLimb" x1="0%" y1="0%" x2="100%" y2="10%">
+                    <stop offset="0%" stop-color="#573e24"/>
+                    <stop offset="45%" stop-color="#cfa369"/>
+                    <stop offset="100%" stop-color="#4f3820"/>
+                </linearGradient>
+
+                <!-- 침 몸체 및 손잡이 금속 그라데이션 -->
+                <linearGradient id="goldHandle" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#fff3b0"/>
+                    <stop offset="50%" stop-color="#d4af37"/>
+                    <stop offset="100%" stop-color="#8a6d1c"/>
+                </linearGradient>
+
+                <!-- 인체 그림자 필터 -->
+                <filter id="dropShadow" x="-15%" y="-10%" width="130%" height="130%">
+                    <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000" flood-opacity="0.55"/>
+                </filter>
+
+                <!-- 혈자리 발광 필터 -->
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+
+            <!-- 배경 경락 보조 원형 가이드 -->
+            <circle cx="160" cy="240" r="145" fill="none" stroke="rgba(212, 175, 55, 0.12)" stroke-width="1" stroke-dasharray="4 4"/>
+            <line x1="160" y1="20" x2="160" y2="460" stroke="rgba(212, 175, 55, 0.15)" stroke-width="1" stroke-dasharray="3 3"/>
+
+            <!-- 인체 그룹 (그림자 적용) -->
+            <g filter="url(#dropShadow)">
+                <!-- 귀 (좌/우) -->
+                <ellipse cx="122" cy="82" rx="6" ry="13" fill="url(#bronzeLimb)" stroke="#3d2914" stroke-width="1"/>
+                <ellipse cx="198" cy="82" rx="6" ry="13" fill="url(#bronzeLimb)" stroke="#3d2914" stroke-width="1"/>
+
+                <!-- 목 & 승모근 -->
+                <path d="M 143 118 L 141 142 Q 115 150 96 158 L 224 158 Q 205 150 179 142 L 177 118 Z" fill="url(#bronzeBody)" stroke="#3d2914" stroke-width="1.2"/>
+
+                <!-- 머리 (두상 및 턱선 윤곽) -->
+                <path d="M 125 75 C 125 38, 195 38, 195 75 C 195 103, 180 125, 160 127 C 140 125, 125 103, 125 75 Z" fill="url(#bronzeHead)" stroke="#3d2914" stroke-width="1.5"/>
+
+                <!-- 상체 (흉곽, 쇄골, 복부 해부학 라인) -->
+                <path d="M 96 158 C 88 175, 95 215, 108 242 C 112 258, 105 278, 105 292 L 215 292 C 215 278, 208 258, 212 242 C 225 215, 232 175, 224 158 Z" fill="url(#bronzeBody)" stroke="#3d2914" stroke-width="1.5"/>
+
+                <!-- 왼팔 (상완 - 팔꿈치 - 전완 - 손) -->
+                <path d="M 96 158 C 78 168, 72 198, 66 225 C 58 250, 48 275, 42 294 C 36 306, 38 318, 46 320 C 52 321, 56 308, 58 298 C 68 276, 80 252, 86 228 C 92 206, 98 185, 102 174" fill="url(#bronzeLimb)" stroke="#3d2914" stroke-width="1.3"/>
+
+                <!-- 오른팔 (상완 - 팔꿈치 - 전완 - 손) -->
+                <path d="M 224 158 C 242 168, 248 198, 254 225 C 262 250, 272 275, 278 294 C 284 306, 282 318, 274 320 C 268 321, 264 308, 262 298 C 252 276, 240 252, 234 228 C 228 206, 222 185, 218 174" fill="url(#bronzeLimb)" stroke="#3d2914" stroke-width="1.3"/>
+
+                <!-- 골반 및 하체 (허벅지 - 무릎 - 종아리 - 발) -->
+                <!-- 왼쪽 다리 -->
+                <path d="M 105 292 C 103 325, 108 355, 112 378 C 110 402, 112 428, 114 445 L 104 456 C 102 460, 118 462, 128 458 L 132 442 C 136 422, 138 398, 136 376 C 142 350, 148 322, 155 302 L 160 302" fill="url(#bronzeLimb)" stroke="#3d2914" stroke-width="1.3"/>
+                <!-- 오른쪽 다리 -->
+                <path d="M 215 292 C 217 325, 212 355, 208 378 C 210 402, 208 428, 206 445 L 216 456 C 218 460, 202 462, 192 458 L 188 442 C 184 422, 182 398, 184 376 C 178 350, 172 322, 165 302 L 160 302" fill="url(#bronzeLimb)" stroke="#3d2914" stroke-width="1.3"/>
+
+                <!-- 해부학적 세부 음영 및 윤곽선 -->
+                <!-- 이목구비 -->
+                <path d="M 137 72 Q 145 68 152 72" fill="none" stroke="#4a3219" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M 168 72 Q 175 68 183 72" fill="none" stroke="#4a3219" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M 140 77 Q 145 75 150 77" fill="none" stroke="#3d2914" stroke-width="1.4"/>
+                <path d="M 170 77 Q 175 75 180 77" fill="none" stroke="#3d2914" stroke-width="1.4"/>
+                <!-- 코 음영 -->
+                <path d="M 160 72 L 157 93 Q 160 96 164 93" fill="none" stroke="#4a3219" stroke-width="1.5" stroke-linecap="round"/>
+                <!-- 입술 -->
+                <path d="M 150 108 Q 160 111 170 108" fill="none" stroke="#4a3219" stroke-width="1.6" stroke-linecap="round"/>
+                <path d="M 154 112 Q 160 114 166 112" fill="none" stroke="#6e4b26" stroke-width="1.1"/>
+
+                <!-- 쇄골 및 대흉근 음영 -->
+                <path d="M 110 162 Q 138 168 155 162" fill="none" stroke="#5c4023" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M 210 162 Q 182 168 165 162" fill="none" stroke="#5c4023" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M 112 198 Q 135 206 157 195" fill="none" stroke="#6e4b26" stroke-width="1.3" opacity="0.7"/>
+                <path d="M 208 198 Q 185 206 163 195" fill="none" stroke="#6e4b26" stroke-width="1.3" opacity="0.7"/>
+
+                <!-- 복부 정중선(임맥) 및 복근 음영 -->
+                <line x1="160" y1="170" x2="160" y2="275" stroke="#5c4023" stroke-width="1.2" opacity="0.65"/>
+                <circle cx="160" cy="252" r="2.5" fill="#4a3219"/> <!-- 배꼽(신궐혈) -->
+                <path d="M 136 218 Q 133 245 140 272" fill="none" stroke="#6e4b26" stroke-width="1.1" opacity="0.55"/>
+                <path d="M 184 218 Q 187 245 180 272" fill="none" stroke="#6e4b26" stroke-width="1.1" opacity="0.55"/>
+
+                <!-- 무릎 관절 음영 -->
+                <path d="M 116 372 Q 124 368 132 372" fill="none" stroke="#5c4023" stroke-width="1.3" opacity="0.7"/>
+                <path d="M 117 383 Q 124 386 131 383" fill="none" stroke="#5c4023" stroke-width="1.3" opacity="0.7"/>
+                <path d="M 188 372 Q 196 368 204 372" fill="none" stroke="#5c4023" stroke-width="1.3" opacity="0.7"/>
+                <path d="M 189 383 Q 196 386 203 383" fill="none" stroke="#5c4023" stroke-width="1.3" opacity="0.7"/>
+            </g>
+
+            <!-- 혈자리 및 침 렌더링 레이어 -->
+            <g id="pointsLayer"></g>
+            <g id="needlesLayer"></g>
+        </svg>
+    </div>
+
+    <button class="btn-start" id="startBtn" onclick="startAcupuncture()">침 놓기 시작</button>
+</div>
+
+<script>
+    const acupointDB = [
+        {
+            keywords: ["코", "막힘", "비염", "맹맹", "콧물"],
+            symptomName: "코막힘 / 비염",
+            points: [
+                { name: "인당혈", x: 160, y: 71 },
+                { name: "영향혈(좌)", x: 151, y: 93 },
+                { name: "영향혈(우)", x: 169, y: 93 },
+                { name: "합곡혈", x: 47, y: 302 }
+            ]
+        },
+        {
+            keywords: ["머리", "두통", "어지럼", "편두통"],
+            symptomName: "두통 / 어지럼증",
+            points: [
+                { name: "백회혈", x: 160, y: 47 },
+                { name: "태양혈(좌)", x: 132, y: 75 },
+                { name: "태양혈(우)", x: 188, y: 75 },
+                { name: "합곡혈", x: 47, y: 302 }
+            ]
+        },
+        {
+            keywords: ["소화", "체했", "배", "위장", "복통", "속"],
+            symptomName: "소화불량 / 복통",
+            points: [
+                { name: "중완혈", x: 160, y: 224 },
+                { name: "천추혈(좌)", x: 142, y: 252 },
+                { name: "천추혈(우)", x: 178, y: 252 },
+                { name: "족삼리", x: 118, y: 396 }
+            ]
+        },
+        {
+            keywords: ["피로", "기력", "몸살", "면역", "지쳐"],
+            symptomName: "만성피로 / 기력저하",
+            points: [
+                { name: "관원혈", x: 160, y: 274 },
+                { name: "족삼리(좌)", x: 118, y: 396 },
+                { name: "족삼리(우)", x: 202, y: 396 }
+            ]
+        },
+        {
+            keywords: ["눈", "침침", "시력", "충혈"],
+            symptomName: "눈 피로 / 시력 보호",
+            points: [
+                { name: "찬죽혈(좌)", x: 151, y: 69 },
+                { name: "찬죽혈(우)", x: 169, y: 69 },
+                { name: "태양혈", x: 132, y: 75 }
+            ]
+        },
+        {
+            keywords: ["목", "뻐근", "어깨", "결림", "뒷목"],
+            symptomName: "목·어깨 결림",
+            points: [
+                { name: "풍지혈(좌)", x: 142, y: 132 },
+                { name: "풍지혈(우)", x: 178, y: 132 },
+                { name: "견정혈", x: 112, y: 155 }
+            ]
+        },
+        {
+            keywords: ["불면", "잠", "예민", "수면"],
+            symptomName: "불면증 / 수면 장애",
+            points: [
+                { name: "신문혈", x: 54, y: 288 },
+                { name: "삼음교", x: 127, y: 428 },
+                { name: "백회혈", x: 160, y: 47 }
+            ]
+        },
+        {
+            keywords: ["스트레스", "화병", "답답", "가슴", "우울"],
+            symptomName: "스트레스 / 화병 완화",
+            points: [
+                { name: "전중혈", x: 160, y: 196 },
+                { name: "태충혈", x: 204, y: 452 }
+            ]
+        },
+        {
+            keywords: ["생리", "생리통", "자궁", "배앓이"],
+            symptomName: "생리통 완화",
+            points: [
+                { name: "관원혈", x: 160, y: 274 },
+                { name: "삼음교(좌)", x: 127, y: 428 },
+                { name: "삼음교(우)", x: 193, y: 428 }
+            ]
+        },
+        {
+            keywords: ["멀미", "구토", "메슥", "어지러"],
+            symptomName: "멀미 / 구역감",
+            points: [
+                { name: "내관혈(좌)", x: 58, y: 272 },
+                { name: "내관혈(우)", x: 262, y: 272 }
+            ]
+        },
+        {
+            keywords: ["여드름", "피부", "트러블", "뾰루지"],
+            symptomName: "피부 트러블 진정",
+            points: [
+                { name: "곡지혈(좌)", x: 74, y: 224 },
+                { name: "곡지혈(우)", x: 246, y: 224 },
+                { name: "합곡혈", x: 47, y: 302 }
+            ]
+        },
+        {
+            keywords: ["부종", "붓기", "부었", "순환"],
+            symptomName: "부종 완화 / 혈액순환",
+            points: [
+                { name: "족삼리", x: 118, y: 396 },
+                { name: "음릉천", x: 132, y: 388 }
+            ]
+        }
+    ];
+
+    let currentPoints = [];
+
+    function searchSymptom() {
+        const input = document.getElementById("symptomInput").value.trim();
+        const resultBox = document.getElementById("resultBox");
+        const startBtn = document.getElementById("startBtn");
+        const pointsLayer = document.getElementById("pointsLayer");
+        const needlesLayer = document.getElementById("needlesLayer");
+
+        pointsLayer.innerHTML = "";
+        needlesLayer.innerHTML = "";
+        startBtn.style.display = "none";
+
+        if (!input) {
+            resultBox.innerHTML = "증상을 입력해 주세요.";
+            return;
+        }
+
+        const matched = acupointDB.find(item => 
+            item.keywords.some(kw => input.includes(kw))
+        );
+
+        if (!matched) {
+            resultBox.innerHTML = `'${input}'에 대한 데이터가 없습니다. 상단 지원 증상 키워드로 검색해 보세요.`;
+            return;
+        }
+
+        currentPoints = matched.points;
+        const pointNames = currentPoints.map(p => `<strong style="color:#e6c27a;">${p.name}</strong>`).join(", ");
+        resultBox.innerHTML = `진단 증상: <b>${matched.symptomName}</b><br>선혈 처방 (${currentPoints.length}혈): ${pointNames}`;
+
+        currentPoints.forEach(pt => {
+            const pulse = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            pulse.setAttribute("cx", pt.x);
+            pulse.setAttribute("cy", pt.y);
+            pulse.setAttribute("r", "4");
+            pulse.setAttribute("fill", "rgba(255, 82, 82, 0.5)");
+            pulse.setAttribute("class", "point-pulse");
+            pointsLayer.appendChild(pulse);
+
+            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            dot.setAttribute("cx", pt.x);
+            dot.setAttribute("cy", pt.y);
+            dot.setAttribute("r", "3.5");
+            dot.setAttribute("fill", "#ff4d4d");
+            dot.setAttribute("stroke", "#fff");
+            dot.setAttribute("stroke-width", "1");
+            dot.setAttribute("filter", "url(#glow)");
+            pointsLayer.appendChild(dot);
+
+            const textWidth = pt.name.length * 9 + 8;
+            const offsetX = pt.x > 210 ? -textWidth - 6 : 8;
+
+            const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            bg.setAttribute("x", pt.x + offsetX);
+            bg.setAttribute("y", pt.y - 8);
+            bg.setAttribute("width", textWidth);
+            bg.setAttribute("height", "16");
+            bg.setAttribute("class", "point-label-bg");
+            pointsLayer.appendChild(bg);
+
+            const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            label.setAttribute("x", pt.x + offsetX + 4);
+            label.setAttribute("y", pt.y + 4);
+            label.setAttribute("font-size", "10.5");
+            label.setAttribute("font-weight", "bold");
+            label.setAttribute("fill", "#f8f9fa");
+            label.textContent = pt.name;
+            pointsLayer.appendChild(label);
+        });
+
+        startBtn.style.display = "block";
+    }
+
+    function startAcupuncture() {
+        const needlesLayer = document.getElementById("needlesLayer");
+        needlesLayer.innerHTML = "";
+
+        currentPoints.forEach((pt, index) => {
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.setAttribute("class", "needle");
+
+            const impact = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            impact.setAttribute("cx", pt.x);
+            impact.setAttribute("cy", pt.y);
+            impact.setAttribute("r", "5");
+            impact.setAttribute("fill", "none");
+            impact.setAttribute("stroke", "#ffd700");
+            impact.setAttribute("stroke-width", "1");
+            impact.setAttribute("opacity", "0.8");
+
+            const shaft = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            shaft.setAttribute("x1", pt.x);
+            shaft.setAttribute("y1", pt.y);
+            shaft.setAttribute("x2", pt.x + 14);
+            shaft.setAttribute("y2", pt.y - 25);
+            shaft.setAttribute("stroke", "#e0e6ed");
+            shaft.setAttribute("stroke-width", "1.4");
+
+            const handle = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            handle.setAttribute("x1", pt.x + 14);
+            handle.setAttribute("y1", pt.y - 25);
+            handle.setAttribute("x2", pt.x + 21);
+            handle.setAttribute("y2", pt.y - 37);
+            handle.setAttribute("stroke", "url(#goldHandle)");
+            handle.setAttribute("stroke-width", "3.5");
+            handle.setAttribute("stroke-linecap", "round");
+
+            g.appendChild(impact);
+            g.appendChild(shaft);
+            g.appendChild(handle);
+            needlesLayer.appendChild(g);
+
+            setTimeout(() => {
+                g.classList.add("inserted");
+            }, index * 700 + 100);
+        });
+    }
+</script>
+
+</body>
+</html>
